@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, AsyncGenerator
 
 from aiohttp import ClientSession
 
@@ -13,15 +13,26 @@ from .portal_api import PortalApi
 
 logconfig.init()
 logger = logging.getLogger(__name__)
+logger.setLevel(settings.LOG_LEVEL)
 
 
-class ConnectorBase(ABC):
+# todo
+async def gather_with_semaphore(n, *tasks):
+    semaphore = asyncio.Semaphore(n)
+
+    async def sem_task(task):
+        async with semaphore:
+            return await task
+    return await asyncio.gather(*(sem_task(task) for task in tasks))
+
+
+class AbstractConnector(ABC):
 
     def __init__(self):
         super().__init__()
         self.portal = PortalApi()
         self.metrics = CdipMetrics()
-        self.load_batch_size = 500  # a default meant to be overridden as needed
+        self.load_batch_size = 1000  # a default meant to be overridden as needed
 
     def execute(self) -> None:
         self.metrics.incr_count(MetricsEnum.INVOKED)
@@ -34,6 +45,7 @@ class ConnectorBase(ABC):
                 integration_info = await self.portal.get_integrations_for_type(session,
                                                                                settings.CDIP_INTEGRATION_TYPE_SLUG)
 
+                # todo gather_with_semaphore!
                 result = await asyncio.gather(*[
                     self.extract_load(session, i) for i in integration_info
                 ])
@@ -46,25 +58,27 @@ class ConnectorBase(ABC):
     async def extract_load(self,
                            session: ClientSession,
                            integration: IntegrationInformation) -> int:
-        extracted = await self.extract(session, integration)
-        if extracted:
+        total = 0
+        async for extracted in self.extract(session, integration):
             # transformed = [self.transform(integration.integration_id, r) for r in extracted]
-            logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
-            logger.info(f'first transformed payload: {extracted[0]}')
+            if extracted:
+                logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
+                logger.info(f'first transformed payload: {extracted[0]}')
 
-            await self.load(session, extracted)
-            await self.update_state(session, integration)
+                await self.load(session, extracted)
+                await self.update_state(session, integration)
 
-            self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
-        else:
+                self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
+                total += len(extracted)
+        if not total:
             logger.info(f'{integration.login}:{integration.id} Nothing to send to CDIP')
-        return len(extracted) if extracted else 0
+        return total
 
     @abstractmethod
     async def extract(self,
                       session: ClientSession,
-                      integration_info: IntegrationInformation) -> List[CdipPosition]:
-        ...
+                      integration_info: IntegrationInformation) -> AsyncGenerator[List, None]:
+        s = yield 0  # unreachable, but makes the return type AsyncGenerator, expected by caller
 
     # @abstractmethod
     # def transform(self, integration_id, data):

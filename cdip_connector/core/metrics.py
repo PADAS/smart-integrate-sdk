@@ -6,6 +6,7 @@ from cdip_connector.core import cdip_settings
 from .schemas import MetricsEnum
 
 logger = logging.getLogger(__name__)
+logger.setLevel(cdip_settings.LOG_LEVEL)
 
 
 class CdipMetrics:

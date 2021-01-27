@@ -8,10 +8,7 @@ from cdip_connector.core import cdip_settings
 from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation
 
 logger = logging.getLogger(__name__)
-
-OAUTH_TOKEN_URL = f'{cdip_settings.KEYCLOAK_ISSUER}/protocol/openid-connect/token'
-PORTAL_API_ENDPOINT = f'{cdip_settings.CDIP_ADMIN_ENDPOINT}/api/v1.0'
-PORTAL_API_INBOUND_INTEGRATIONS_ENDPOINT = f'{PORTAL_API_ENDPOINT}/integrations/inbound/configurations'
+logger.setLevel(cdip_settings.LOG_LEVEL)
 
 
 class PortalApi:
@@ -19,8 +16,8 @@ class PortalApi:
     def __init__(self):
         self.client_id = cdip_settings.KEYCLOAK_CLIENT_ID
         self.client_secret = cdip_settings.KEYCLOAK_CLIENT_SECRET
-        self.integrations_endpoint = PORTAL_API_INBOUND_INTEGRATIONS_ENDPOINT
-        self.oauth_token_url = OAUTH_TOKEN_URL
+        self.integrations_endpoint = cdip_settings.PORTAL_API_INBOUND_INTEGRATIONS_ENDPOINT
+        self.oauth_token_url = cdip_settings.OAUTH_TOKEN_URL
         self.audience = cdip_settings.KEYCLOAK_AUDIENCE
 
     async def get_access_token(self,
