@@ -1,11 +1,11 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import List, AsyncGenerator
+from typing import List, AsyncGenerator, Any
 
 from aiohttp import ClientSession
 
-from cdip_connector.core import cdip_settings as settings
+from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
 from .schemas import MetricsEnum, IntegrationInformation, CdipPosition
 from .metrics import CdipMetrics
@@ -13,7 +13,7 @@ from .portal_api import PortalApi
 
 logconfig.init()
 logger = logging.getLogger(__name__)
-logger.setLevel(settings.LOG_LEVEL)
+logger.setLevel(cdip_settings.LOG_LEVEL)
 
 
 # todo
@@ -41,9 +41,9 @@ class AbstractConnector(ABC):
     async def main(self) -> None:
         try:
             async with ClientSession() as session:
-                logger.info(f'CDIP_INTEGRATION_TYPE_SLUG: {settings.CDIP_INTEGRATION_TYPE_SLUG}')
+                logger.info(f'CDIP_INTEGRATION_TYPE_SLUG: {cdip_settings.CDIP_INTEGRATION_TYPE_SLUG}')
                 integration_info = await self.portal.get_integrations_for_type(session,
-                                                                               settings.CDIP_INTEGRATION_TYPE_SLUG)
+                                                                               cdip_settings.CDIP_INTEGRATION_TYPE_SLUG)
 
                 # todo gather_with_semaphore!
                 result = await asyncio.gather(*[
@@ -91,7 +91,7 @@ class AbstractConnector(ABC):
 
     async def load(self,
                    session: ClientSession,
-                   transformed_data: List[CdipPosition]) -> None:
+                   transformed_data: List[Any]) -> None:
 
         transformed_data = [r.dict() for r in transformed_data]
         headers = await self.portal.get_auth_header(session)
@@ -101,10 +101,9 @@ class AbstractConnector(ABC):
             for start_index in range(0, num_obs, batch_size):
                 yield transformed_data[start_index: min(start_index + batch_size, num_obs)]
 
-        positions_url = f'{settings.CDIP_API}/positions/'
-        logger.info(positions_url)
+        logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
         for i, batch in enumerate(generate_batches()):
             logger.debug(f'sending batch no: {i + 1}')
-            resp = await session.post(url=positions_url, headers=headers, json=batch)
+            resp = await session.post(url=cdip_settings.CDIP_API_ENDPOINT, headers=headers, json=batch)
             logger.info(resp)
             resp.raise_for_status()
