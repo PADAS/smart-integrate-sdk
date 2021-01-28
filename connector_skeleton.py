@@ -17,10 +17,10 @@ class MyConnector(AbstractConnector):
                       integration_info: IntegrationInformation) -> List[CdipPosition]:
         # ETL extract code goes here. This is specific to each integration
 
-        # update the state datastructure in IntegrationInformation before yield
+        # update the state data structure in IntegrationInformation before yield
 
-        # yield a list of data records from this method, & caller will post to cdip api
-        # needs to be a yield for this method to return an async_generator required by caller
+        # yield a list of data records from this method, parent will post to cdip api
+        # needs to be a yield for this method to return an async_generator required by parent
         yield []
 
 
