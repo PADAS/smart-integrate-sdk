@@ -44,16 +44,14 @@ class PortalApi:
             "authorization": f"{token_object.token_type} {token_object.access_token}"
         }
 
-    async def get_integrations_for_type(self,
-                                        session: ClientSession,
-                                        type_slug: str,
-                                        t_int_info: TIntegrationInformation = IntegrationInformation) -> List[IntegrationInformation]:
-        logger.debug(f'get_integrations_for_type: {type_slug}')
+    async def get_authorized_integrations(self,
+                                          session: ClientSession,
+                                          t_int_info: TIntegrationInformation = IntegrationInformation) -> List[IntegrationInformation]:
+        logger.debug(f'get_authorized_integrations for : {cdip_settings.KEYCLOAK_CLIENT_ID}')
         headers = await self.get_auth_header(session)
 
-        logger.debug(f'url: {self.integrations_endpoint}, params: {type_slug}')
+        logger.debug(f'url: {self.integrations_endpoint}')
         response = await session.get(url=self.integrations_endpoint,
-                                     params=dict(type_slug=type_slug),
                                      headers=headers)
         response.raise_for_status()
         json_response = await response.text()
@@ -61,7 +59,7 @@ class PortalApi:
         if isinstance(json_response, dict):
             json_response = [json_response]
 
-        logger.debug(f'Got {len(json_response)} integrations of type {type_slug}')
+        logger.debug(f'Got {len(json_response)} integrations for {cdip_settings.KEYCLOAK_CLIENT_ID}')
         return [
             t_int_info.parse_obj(r) for r in json_response
         ]

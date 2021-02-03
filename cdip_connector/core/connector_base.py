@@ -7,7 +7,7 @@ from aiohttp import ClientSession
 
 from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
-from .schemas import MetricsEnum, IntegrationInformation, CdipPosition
+from .schemas import MetricsEnum, IntegrationInformation, CDIPBaseModel
 from .metrics import CdipMetrics
 from .portal_api import PortalApi
 
@@ -41,9 +41,8 @@ class AbstractConnector(ABC):
     async def main(self) -> None:
         try:
             async with ClientSession() as session:
-                logger.info(f'CDIP_INTEGRATION_TYPE_SLUG: {cdip_settings.CDIP_INTEGRATION_TYPE_SLUG}')
-                integration_info = await self.portal.get_integrations_for_type(session,
-                                                                               cdip_settings.CDIP_INTEGRATION_TYPE_SLUG)
+                logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
+                integration_info = await self.portal.get_authorized_integrations(session)
 
                 # todo gather_with_semaphore!
                 result = await asyncio.gather(*[
@@ -77,7 +76,7 @@ class AbstractConnector(ABC):
     @abstractmethod
     async def extract(self,
                       session: ClientSession,
-                      integration_info: IntegrationInformation) -> AsyncGenerator[List, None]:
+                      integration_info: IntegrationInformation) -> AsyncGenerator[List[CDIPBaseModel], None]:
         s = yield 0  # unreachable, but makes the return type AsyncGenerator, expected by caller
 
     # @abstractmethod
@@ -91,7 +90,7 @@ class AbstractConnector(ABC):
 
     async def load(self,
                    session: ClientSession,
-                   transformed_data: List[Any]) -> None:
+                   transformed_data: List[CDIPBaseModel]) -> None:
 
         transformed_data = [r.dict() for r in transformed_data]
         headers = await self.portal.get_auth_header(session)
