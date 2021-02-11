@@ -45,7 +45,7 @@ class RadioStatusEnum(str, Enum):
 class Location(BaseModel):
     x: float = Field(..., ge=-180.0, le=360.0)
     y: float = Field(..., ge=-90.0, le=90.0)
-    z: float = Field(0.0, ge=0.0)
+    z: float = Field(0.0)
     hdop: Optional[int] = None
     vdop: Optional[int] = None
 
