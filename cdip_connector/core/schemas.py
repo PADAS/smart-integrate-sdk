@@ -1,16 +1,30 @@
 import abc
+import logging
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Iterable
 from typing import TypeVar
 from typing import Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl, ValidationError
+
+logger = logging.getLogger(__name__)
 
 
 class StreamPrefixEnum(str, Enum):
     position = 'ps'
     geoevent = 'ge'
+
+
+class DestinationTypes(Enum):
+    EarthRanger = 'earth_ranger'
+    SmartConnect = 'smart_connect'
+
+
+class EventTypes(str, Enum):
+    glad_alert = 'gfw_glad_alert'
+    fire_alert = 'gfw_activefire_alert'
+    skylight_entry_alert = 'entry_alert_rep'
 
 
 class TokenData(BaseModel):
@@ -109,7 +123,41 @@ class IntegrationInformation(BaseModel):
     token: str
     endpoint: str
     id: str
-    state: Dict[str, Any]
+    state: Optional[Dict[str, Any]] = {}
 
+
+class OutboundConfiguration(BaseModel):
+    id: UUID
+    type: UUID
+    owner: UUID
+    endpoint: HttpUrl
+    state: Optional[Dict[str, Any]] = {}
+    login: Optional[str] = None
+    password: Optional[str] = None
+    token: Optional[str] = None
+    type_slug: str
+    inbound_type_slug: str
+    additional: Optional[Dict[str, Any]] = {}
+
+
+models_by_stream_type = {
+    StreamPrefixEnum.position: Position,
+    StreamPrefixEnum.geoevent: GeoEvent
+}
 
 TIntegrationInformation = TypeVar("TIntegrationInformation", bound=IntegrationInformation)
+
+
+def get_validated_objects(objects: Iterable, model: BaseModel) -> List[BaseModel]:
+    validated = []
+    for obj in objects:
+        try:
+            if isinstance(obj, dict):
+                validated.append(model.parse_obj(obj))
+            elif isinstance(obj, (str, bytes)):
+                validated.append(model.parse_raw(obj))
+            else:
+                logger.warning(f'ignoring unknown type {type(obj)} for {obj}')
+        except ValidationError as ve:
+            logger.warning(f'Error {ve} for {obj}')
+    return validated
