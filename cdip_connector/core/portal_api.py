@@ -1,11 +1,13 @@
 import json
 import logging
 from typing import List
+from uuid import UUID
 
 from aiohttp import ClientSession
+from pydantic import parse_raw_as
 
 from cdip_connector.core import cdip_settings
-from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation
+from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation, DeviceState
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cdip_settings.LOG_LEVEL)
@@ -75,3 +77,27 @@ class PortalApi:
             json=dict(state=integration_info.state))
         logger.info(f'cursor upd resp: {response.status}')
         response.raise_for_status()
+
+        await self.update_device_states(session, integration_info.id, integration_info.device_states)
+
+    async def fetch_device_states(self,
+                                  session: ClientSession,
+                                  inbound_id: UUID):
+        headers = await self.get_auth_header(session)
+        response = await session.get(url=f'{cdip_settings.PORTAL_API_DEVICES_ENDPOINT}/?inbound_config_id={inbound_id}',
+                                     headers=headers)
+        response.raise_for_status()
+        resp_text = await response.text()
+        return parse_raw_as(List[DeviceState], resp_text)
+
+    async def update_device_states(self,
+                                   session: ClientSession,
+                                   inbound_id: UUID,
+                                   device_state: List[DeviceState]):
+        states_dict = {s.device_external_id: s.end_state for s in device_state}
+        headers = await self.get_auth_header(session)
+        response = await session.post(url=f'{cdip_settings.PORTAL_API_DEVICES_ENDPOINT}/update/{inbound_id}',
+                                      headers=headers,
+                                      json=states_dict)
+        response.raise_for_status()
+        logger.info(f'update device_states resp: {response.status}')

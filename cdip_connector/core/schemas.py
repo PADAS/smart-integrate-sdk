@@ -38,6 +38,11 @@ class OAuthToken(BaseModel):
     token_type: str
 
 
+class DeviceState(BaseModel):
+    device_external_id: str
+    end_state: str
+
+
 class MetricsEnum(Enum):
     INVOKED = 'invoked'
     ERRORS = 'errors'
@@ -121,9 +126,10 @@ class IntegrationInformation(BaseModel):
     login: str
     password: str
     token: str
-    endpoint: str
-    id: str
+    endpoint: HttpUrl
+    id: UUID
     state: Optional[Dict[str, Any]] = {}
+    device_states: Optional[List[DeviceState]] = []
 
 
 class OutboundConfiguration(BaseModel):
@@ -148,8 +154,9 @@ models_by_stream_type = {
 TIntegrationInformation = TypeVar("TIntegrationInformation", bound=IntegrationInformation)
 
 
-def get_validated_objects(objects: Iterable, model: BaseModel) -> List[BaseModel]:
+def get_validated_objects(objects: Iterable, model: BaseModel) -> (List[BaseModel], List[str]):
     validated = []
+    errors = []
     for obj in objects:
         try:
             if isinstance(obj, dict):
@@ -160,4 +167,5 @@ def get_validated_objects(objects: Iterable, model: BaseModel) -> List[BaseModel
                 logger.warning(f'ignoring unknown type {type(obj)} for {obj}')
         except ValidationError as ve:
             logger.warning(f'Error {ve} for {obj}')
-    return validated
+            errors.append(str(ve))
+    return validated, errors

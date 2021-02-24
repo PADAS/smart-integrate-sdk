@@ -58,6 +58,8 @@ class AbstractConnector(ABC):
                            session: ClientSession,
                            integration: IntegrationInformation) -> int:
         total = 0
+        device_states = await self.portal.fetch_device_states(session, integration.id)
+        integration.device_states = device_states
         async for extracted in self.extract(session, integration):
             # transformed = [self.transform(integration.integration_id, r) for r in extracted]
             if extracted:
