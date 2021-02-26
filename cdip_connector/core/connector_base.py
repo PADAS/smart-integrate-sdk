@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from abc import ABC, abstractmethod
 from typing import List, AsyncGenerator, Any
@@ -94,7 +95,8 @@ class AbstractConnector(ABC):
                    session: ClientSession,
                    transformed_data: List[CDIPBaseModel]) -> None:
 
-        transformed_data = [r.dict() for r in transformed_data]
+        # transformed_data = [r.dict() for r in transformed_data]
+        transformed_data = [json.loads(r.json()) for r in transformed_data]
         headers = await self.portal.get_auth_header(session)
 
         def generate_batches(batch_size=self.load_batch_size):
@@ -105,6 +107,8 @@ class AbstractConnector(ABC):
         logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
         for i, batch in enumerate(generate_batches()):
             logger.debug(f'sending batch no: {i + 1}')
-            resp = await session.post(url=cdip_settings.CDIP_API_ENDPOINT, headers=headers, json=batch)
+            resp = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
+                                      headers=headers,
+                                      json=batch)
             logger.info(resp)
             resp.raise_for_status()

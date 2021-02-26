@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List
+from typing import List, Dict, Any
 from uuid import UUID
 
 from aiohttp import ClientSession
@@ -75,10 +75,12 @@ class PortalApi:
             url=f'{self.integrations_endpoint}/{integration_info.id}',
             headers=headers,
             json=dict(state=integration_info.state))
-        logger.info(f'cursor upd resp: {response.status}')
+        logger.info(f'update integration state resp: {response.status}')
         response.raise_for_status()
 
-        await self.update_device_states(session, integration_info.id, integration_info.device_states)
+        return await self.update_states_with_dict(session,
+                                                   integration_info.id,
+                                                   integration_info.device_states)
 
     async def fetch_device_states(self,
                                   session: ClientSession,
@@ -88,16 +90,34 @@ class PortalApi:
                                      headers=headers)
         response.raise_for_status()
         resp_text = await response.text()
-        return parse_raw_as(List[DeviceState], resp_text)
+        states_received = parse_raw_as(List[DeviceState], resp_text)
+        # todo: cleanup after all functions have their device state migrated over
+        states_asdict = {}
+        for s in states_received:
+            if isinstance(s.state, dict) and 'value' in s.state:
+                states_asdict[s.device_external_id] = s.state.get('value')
+            else:
+                states_asdict[s.device_external_id] = s.state
+        return states_asdict
+        # return {s.device_external_id: s.state for s in states_received}
 
     async def update_device_states(self,
                                    session: ClientSession,
                                    inbound_id: UUID,
                                    device_state: List[DeviceState]):
-        states_dict = {s.device_external_id: s.end_state for s in device_state}
+        states_dict = {s.device_external_id: s.state for s in device_state}
+        return await self.update_states_with_dict(session, inbound_id, states_dict)
+
+    async def update_states_with_dict(self,
+                                      session: ClientSession,
+                                      inbound_id: UUID,
+                                      states_dict: Dict[str, Any]):
         headers = await self.get_auth_header(session)
         response = await session.post(url=f'{cdip_settings.PORTAL_API_DEVICES_ENDPOINT}/update/{inbound_id}',
                                       headers=headers,
                                       json=states_dict)
         response.raise_for_status()
+        text = await response.text()
         logger.info(f'update device_states resp: {response.status}')
+        return text
+

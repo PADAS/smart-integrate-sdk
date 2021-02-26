@@ -40,7 +40,7 @@ class OAuthToken(BaseModel):
 
 class DeviceState(BaseModel):
     device_external_id: str
-    end_state: str
+    state: Optional[Union[str, Dict[str, Any]]] = None
 
 
 class MetricsEnum(Enum):
@@ -80,7 +80,7 @@ class CDIPBaseModel(BaseModel, abc.ABC):
                                                  description="A dictionary of extra data that will be passed through.")
 
     owner: str = 'na'
-    integration_id: Union[int, str, UUID] = Field(None, title='Integration ID',
+    integration_id: Union[UUID, str, int] = Field(None, title='Integration ID',
                                                   description='The unique ID for the '
                                                               'Smart Integrate Inbound Integration.')
 
@@ -129,7 +129,7 @@ class IntegrationInformation(BaseModel):
     endpoint: HttpUrl
     id: UUID
     state: Optional[Dict[str, Any]] = {}
-    device_states: Optional[List[DeviceState]] = []
+    device_states: Optional[Dict[str, Any]] = {}
 
 
 class OutboundConfiguration(BaseModel):
