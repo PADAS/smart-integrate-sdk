@@ -28,6 +28,8 @@ async def gather_with_semaphore(n, *tasks):
 
 
 class AbstractConnector(ABC):
+    DEFAULT_LOOKBACK_DAYS = cdip_settings.DEFAULT_LOOKBACK_DAYS
+    DEFAULT_REQUESTS_TIMEOUT = (3.1, 20)
 
     def __init__(self):
         super().__init__()
