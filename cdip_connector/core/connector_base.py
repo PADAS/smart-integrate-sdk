@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from abc import ABC, abstractmethod
 from typing import List, AsyncGenerator, Any
@@ -27,6 +28,8 @@ async def gather_with_semaphore(n, *tasks):
 
 
 class AbstractConnector(ABC):
+    DEFAULT_LOOKBACK_DAYS = cdip_settings.DEFAULT_LOOKBACK_DAYS
+    DEFAULT_REQUESTS_TIMEOUT = (3.1, 20)
 
     def __init__(self):
         super().__init__()
@@ -58,6 +61,8 @@ class AbstractConnector(ABC):
                            session: ClientSession,
                            integration: IntegrationInformation) -> int:
         total = 0
+        device_states = await self.portal.fetch_device_states(session, integration.id)
+        integration.device_states = device_states
         async for extracted in self.extract(session, integration):
             # transformed = [self.transform(integration.integration_id, r) for r in extracted]
             if extracted:
@@ -92,7 +97,8 @@ class AbstractConnector(ABC):
                    session: ClientSession,
                    transformed_data: List[CDIPBaseModel]) -> None:
 
-        transformed_data = [r.dict() for r in transformed_data]
+        # transformed_data = [r.dict() for r in transformed_data]
+        transformed_data = [json.loads(r.json()) for r in transformed_data]
         headers = await self.portal.get_auth_header(session)
 
         def generate_batches(batch_size=self.load_batch_size):
@@ -103,6 +109,8 @@ class AbstractConnector(ABC):
         logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
         for i, batch in enumerate(generate_batches()):
             logger.debug(f'sending batch no: {i + 1}')
-            resp = await session.post(url=cdip_settings.CDIP_API_ENDPOINT, headers=headers, json=batch)
+            resp = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
+                                      headers=headers,
+                                      json=batch)
             logger.info(resp)
             resp.raise_for_status()

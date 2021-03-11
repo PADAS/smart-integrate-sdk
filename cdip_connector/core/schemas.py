@@ -38,6 +38,11 @@ class OAuthToken(BaseModel):
     token_type: str
 
 
+class DeviceState(BaseModel):
+    device_external_id: str
+    state: Optional[Union[str, Dict[str, Any]]] = None
+
+
 class MetricsEnum(Enum):
     INVOKED = 'invoked'
     ERRORS = 'errors'
@@ -75,7 +80,7 @@ class CDIPBaseModel(BaseModel, abc.ABC):
                                                  description="A dictionary of extra data that will be passed through.")
 
     owner: str = 'na'
-    integration_id: Union[int, str, UUID] = Field(None, title='Integration ID',
+    integration_id: Union[UUID, str, int] = Field(None, title='Integration ID',
                                                   description='The unique ID for the '
                                                               'Smart Integrate Inbound Integration.')
 
@@ -121,9 +126,10 @@ class IntegrationInformation(BaseModel):
     login: str
     password: str
     token: str
-    endpoint: str
-    id: str
+    endpoint: HttpUrl
+    id: UUID
     state: Optional[Dict[str, Any]] = {}
+    device_states: Optional[Dict[str, Any]] = {}
 
 
 class OutboundConfiguration(BaseModel):
@@ -148,8 +154,9 @@ models_by_stream_type = {
 TIntegrationInformation = TypeVar("TIntegrationInformation", bound=IntegrationInformation)
 
 
-def get_validated_objects(objects: Iterable, model: BaseModel) -> List[BaseModel]:
+def get_validated_objects(objects: Iterable, model: BaseModel) -> (List[BaseModel], List[str]):
     validated = []
+    errors = []
     for obj in objects:
         try:
             if isinstance(obj, dict):
@@ -160,4 +167,5 @@ def get_validated_objects(objects: Iterable, model: BaseModel) -> List[BaseModel
                 logger.warning(f'ignoring unknown type {type(obj)} for {obj}')
         except ValidationError as ve:
             logger.warning(f'Error {ve} for {obj}')
-    return validated
+            errors.append(str(ve))
+    return validated, errors
