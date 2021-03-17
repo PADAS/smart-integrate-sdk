@@ -16,6 +16,7 @@ logconfig.init()
 logger = logging.getLogger(__name__)
 logger.setLevel(cdip_settings.LOG_LEVEL)
 
+CLIENT_TIMEOUT_TOTAL=180 # seconds
 
 # todo
 async def gather_with_semaphore(n, *tasks):
@@ -44,7 +45,7 @@ class AbstractConnector(ABC):
     async def main(self) -> None:
         try:
             # Fudge with a really long timeout value.
-            async with ClientSession(timeout=ClientTimeout(total=180)) as session:
+            async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL) as session:
                 logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
                 integration_info = await self.portal.get_authorized_integrations(session)
 
@@ -104,17 +105,16 @@ class AbstractConnector(ABC):
         logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
         for i, batch in enumerate(generate_batches(transformed_data)):
             for j in range(2):
-                logger.debug(f'sending batch no: {i + 1}')
+                logger.debug('sending batch no. %d, length=%d', i, len(batch))
                 clean_batch = [json.loads(r.json()) for r in batch]
-                # batch = [dict(r) for r in batch]
                 client_response = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
                                         headers=headers,
                                         json=clean_batch)
-                # logger.info(client_response)
-                # Kludge to handle Unauthorized.
+
+                # Catch to attemp to re-authorized
                 if client_response.status == 401:
                     headers = await self.portal.get_auth_header(session)
                 else:
-                    continue
+                    client_response.raise_for_status()
 
 
