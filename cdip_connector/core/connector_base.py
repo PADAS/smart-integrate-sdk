@@ -103,7 +103,7 @@ class AbstractConnector(ABC):
 
         logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
         for i, batch in enumerate(generate_batches(transformed_data)):
-            for i in range(2):
+            for j in range(2):
                 logger.debug(f'sending batch no: {i + 1}')
                 clean_batch = [json.loads(r.json()) for r in batch]
                 # batch = [dict(r) for r in batch]
