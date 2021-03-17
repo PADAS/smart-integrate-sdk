@@ -45,7 +45,7 @@ class AbstractConnector(ABC):
     async def main(self) -> None:
         try:
             # Fudge with a really long timeout value.
-            async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL) as session:
+            async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL)) as session:
                 logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
                 integration_info = await self.portal.get_authorized_integrations(session)
 
