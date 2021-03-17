@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any, Iterable
 from typing import TypeVar
 from typing import Union
 from uuid import UUID
+from datetime import datetime
 
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
 
@@ -36,6 +37,8 @@ class OAuthToken(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+    expires_in: int
+    refresh_expires_in: int
 
 
 class DeviceState(BaseModel):

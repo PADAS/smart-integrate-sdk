@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, AsyncGenerator, Any
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 
 from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
@@ -43,7 +43,8 @@ class AbstractConnector(ABC):
 
     async def main(self) -> None:
         try:
-            async with ClientSession() as session:
+            # Fudge with a really long timeout value.
+            async with ClientSession(timeout=ClientTimeout(total=180)) as session:
                 logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
                 integration_info = await self.portal.get_authorized_integrations(session)
 
@@ -64,10 +65,11 @@ class AbstractConnector(ABC):
         device_states = await self.portal.fetch_device_states(session, integration.id)
         integration.device_states = device_states
         async for extracted in self.extract(session, integration):
-            # transformed = [self.transform(integration.integration_id, r) for r in extracted]
-            if extracted:
+
+            if extracted is not None:
                 logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
-                logger.info(f'first transformed payload: {extracted[0]}')
+                if extracted:
+                    logger.info(f'first transformed payload: {extracted[0]}')
 
                 await self.load(session, extracted)
                 await self.update_state(session, integration)
@@ -75,7 +77,7 @@ class AbstractConnector(ABC):
                 self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
                 total += len(extracted)
         if not total:
-            logger.info(f'{integration.login}:{integration.id} Nothing to send to CDIP')
+            logger.info(f'{integration.login}:{integration.id} Nothing to send to SIntegrate')
         return total
 
     @abstractmethod
@@ -83,10 +85,6 @@ class AbstractConnector(ABC):
                       session: ClientSession,
                       integration_info: IntegrationInformation) -> AsyncGenerator[List[CDIPBaseModel], None]:
         s = yield 0  # unreachable, but makes the return type AsyncGenerator, expected by caller
-
-    # @abstractmethod
-    # def transform(self, integration_id, data):
-    #     return data
 
     async def update_state(self,
                            session: ClientSession,
@@ -97,20 +95,26 @@ class AbstractConnector(ABC):
                    session: ClientSession,
                    transformed_data: List[CDIPBaseModel]) -> None:
 
-        # transformed_data = [r.dict() for r in transformed_data]
-        transformed_data = [json.loads(r.json()) for r in transformed_data]
         headers = await self.portal.get_auth_header(session)
 
-        def generate_batches(batch_size=self.load_batch_size):
-            num_obs = len(transformed_data)
-            for start_index in range(0, num_obs, batch_size):
-                yield transformed_data[start_index: min(start_index + batch_size, num_obs)]
+        def generate_batches(iterable, n=self.load_batch_size):
+            for i in range(0, len(iterable), n):
+                yield iterable[i:i+n]    
 
         logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
-        for i, batch in enumerate(generate_batches()):
-            logger.debug(f'sending batch no: {i + 1}')
-            resp = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
-                                      headers=headers,
-                                      json=batch)
-            logger.info(resp)
-            resp.raise_for_status()
+        for i, batch in enumerate(generate_batches(transformed_data)):
+            for i in range(2):
+                logger.debug(f'sending batch no: {i + 1}')
+                clean_batch = [json.loads(r.json()) for r in batch]
+                # batch = [dict(r) for r in batch]
+                client_response = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
+                                        headers=headers,
+                                        json=clean_batch)
+                # logger.info(client_response)
+                # Kludge to handle Unauthorized.
+                if client_response.status == 401:
+                    headers = await self.portal.get_auth_header(session)
+                else:
+                    continue
+
+

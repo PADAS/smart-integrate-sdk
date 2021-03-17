@@ -2,9 +2,13 @@ import json
 import logging
 from typing import List, Dict, Any
 from uuid import UUID
+import requests
+from datetime import datetime, timedelta
+import pytz
 
-from aiohttp import ClientSession
-from pydantic import parse_raw_as
+
+from aiohttp import ClientSession, ClientResponseError
+from pydantic import parse_raw_as, parse_obj_as
 
 from cdip_connector.core import cdip_settings
 from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation, DeviceState
@@ -22,8 +26,15 @@ class PortalApi:
         self.oauth_token_url = cdip_settings.OAUTH_TOKEN_URL
         self.audience = cdip_settings.KEYCLOAK_AUDIENCE
 
+        self.cached_token = None
+        self.cached_token_expires_at = datetime.min.replace(tzinfo=pytz.utc)
+
     async def get_access_token(self,
                                session: ClientSession) -> OAuthToken:
+
+        if self.cached_token and self.cached_token_expires_at > datetime.now(tz=pytz.utc):
+            return self.cached_token
+
         logger.debug(f'get_access_token from {self.oauth_token_url} using client_id: {self.client_id}')
         payload = {
             'client_id': self.client_id,
@@ -37,8 +48,11 @@ class PortalApi:
                                       data=payload)
 
         response.raise_for_status()
-        token = await response.text()
-        return OAuthToken.parse_obj(json.loads(token))
+        token = await response.json()
+        token = OAuthToken.parse_obj(token)
+        self.cached_token_expires_at = datetime.now(tz=pytz.utc) + timedelta(seconds=token.expires_in - 15) #fudge factor
+        self.cached_token = token
+        return token
 
     async def get_auth_header(self, session: ClientSession) -> dict:
         token_object = await self.get_access_token(session)
@@ -56,8 +70,8 @@ class PortalApi:
         response = await session.get(url=self.integrations_endpoint,
                                      headers=headers)
         response.raise_for_status()
-        json_response = await response.text()
-        json_response = json.loads(json_response)
+        json_response = await response.json()
+
         if isinstance(json_response, dict):
             json_response = [json_response]
 
@@ -85,21 +99,27 @@ class PortalApi:
     async def fetch_device_states(self,
                                   session: ClientSession,
                                   inbound_id: UUID):
-        headers = await self.get_auth_header(session)
-        response = await session.get(url=f'{cdip_settings.PORTAL_API_DEVICES_ENDPOINT}/?inbound_config_id={inbound_id}',
-                                     headers=headers)
-        response.raise_for_status()
-        resp_text = await response.text()
-        states_received = parse_raw_as(List[DeviceState], resp_text)
-        # todo: cleanup after all functions have their device state migrated over
-        states_asdict = {}
-        for s in states_received:
-            if isinstance(s.state, dict) and 'value' in s.state:
-                states_asdict[s.device_external_id] = s.state.get('value')
-            else:
-                states_asdict[s.device_external_id] = s.state
-        return states_asdict
-        # return {s.device_external_id: s.state for s in states_received}
+        try:
+            headers = await self.get_auth_header(session)
+
+            # This ought to be quick so just do it straight away.
+            response =  requests.get(url=f'{cdip_settings.PORTAL_API_DEVICES_ENDPOINT}/',
+                        params={'inbound_config_id': str(inbound_id)}, headers=headers, timeout=(3.1, 10))
+            if response.status_code == 200:
+                result = response.json()
+        except ClientResponseError as ex:
+            logger.exception('Failed to get devices for iic: {inbound_id}')
+        else:
+            states_received = parse_obj_as(List[DeviceState], result)
+            # todo: cleanup after all functions have their device state migrated over
+            states_asdict = {}
+            for s in states_received:
+                if isinstance(s.state, dict) and 'value' in s.state:
+                    states_asdict[s.device_external_id] = s.state.get('value')
+                else:
+                    states_asdict[s.device_external_id] = s.state
+            return states_asdict
+            # return {s.device_external_id: s.state for s in states_received}
 
     async def update_device_states(self,
                                    session: ClientSession,
