@@ -83,7 +83,7 @@ class CDIPBaseModel(BaseModel, abc.ABC):
                                                  description="A dictionary of extra data that will be passed through.")
 
     owner: str = 'na'
-    integration_id: Union[UUID, str, int] = Field(None, title='Integration ID',
+    integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
                                                   description='The unique ID for the '
                                                               'Smart Integrate Inbound Integration.')
 
