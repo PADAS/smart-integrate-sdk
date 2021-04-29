@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class StreamPrefixEnum(str, Enum):
     position = 'ps'
     geoevent = 'ge'
+    message = 'msg'
 
 
 class DestinationTypes(Enum):
@@ -123,6 +124,21 @@ class GeoEvent(CDIPBaseModel):
     @staticmethod
     def stream_prefix():
         return StreamPrefixEnum.geoevent.value
+
+
+class Message(BaseModel):
+    owner: str = 'na'
+    integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
+                                                  description='The unique ID for the '
+                                                              'Smart Integrate Inbound Integration.')
+    created_at: datetime
+    text: str
+    sender: str
+    device_ids: List[str]
+
+    @staticmethod
+    def stream_prefix():
+        return StreamPrefixEnum.message.value
 
 
 class IntegrationInformation(BaseModel):
