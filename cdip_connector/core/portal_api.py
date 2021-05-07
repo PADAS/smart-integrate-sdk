@@ -22,9 +22,12 @@ class PortalApi:
     def __init__(self):
         self.client_id = cdip_settings.KEYCLOAK_CLIENT_ID
         self.client_secret = cdip_settings.KEYCLOAK_CLIENT_SECRET
-        self.integrations_endpoint = cdip_settings.PORTAL_API_INBOUND_INTEGRATIONS_ENDPOINT
+        self.integrations_endpoint = f'{cdip_settings.PORTAL_API_ENDPOINT}/integrations/inbound/configurations'
+        self.device_states_endpoint = f'{cdip_settings.PORTAL_API_ENDPOINT}/devices/states'
+
         self.oauth_token_url = cdip_settings.OAUTH_TOKEN_URL
         self.audience = cdip_settings.KEYCLOAK_AUDIENCE
+        self.portal_api_endpoint = cdip_settings.PORTAL_API_ENDPOINT
 
         self.cached_token = None
         self.cached_token_expires_at = datetime.min.replace(tzinfo=pytz.utc)
@@ -134,7 +137,7 @@ class PortalApi:
                                       inbound_id: UUID,
                                       states_dict: Dict[str, Any]):
         headers = await self.get_auth_header(session)
-        response = await session.post(url=f'{cdip_settings.PORTAL_API_DEVICES_ENDPOINT}/update/{inbound_id}',
+        response = await session.post(url=f'{self.device_states_endpoint}/update/{inbound_id}',
                                       headers=headers,
                                       json=states_dict)
         response.raise_for_status()
@@ -142,3 +145,11 @@ class PortalApi:
         logger.info(f'update device_states resp: {response.status}')
         return text
 
+    async def get_bridge_integration(self, session: ClientSession, bridge_id: str):
+
+        headers = await self.get_auth_header(session)
+        response = await session.get(url=f'{cdip_settings.PORTAL_API_ENDPOINT}/integrations/bridges/{bridge_id}',
+                                      headers=headers,
+                                      json=states_dict)
+        response.raise_for_status()
+        return await response.json()
