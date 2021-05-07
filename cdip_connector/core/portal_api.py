@@ -142,3 +142,10 @@ class PortalApi:
         logger.info(f'update device_states resp: {response.status}')
         return text
 
+    async def get_bridge_integration(self, session: ClientSession, bridge_id: str):
+
+        headers = await self.get_auth_header(session)
+        response = await session.get(url=f'{cdip_settings.PORTAL_API_ENDPOINT}/integrations/bridges/{bridge_id}',
+                                      headers=headers)
+        response.raise_for_status()
+        return await response.json()
