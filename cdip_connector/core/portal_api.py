@@ -107,7 +107,7 @@ class PortalApi:
             headers = await self.get_auth_header(session)
 
             # This ought to be quick so just do it straight away.
-            response =  requests.get(url=f'{cdip_settings.PORTAL_API_DEVICES_ENDPOINT}/',
+            response =  requests.get(url=f'{self.device_states_endpoint}/',
                         params={'inbound_config_id': str(inbound_id)}, headers=headers, timeout=(3.1, 10))
             if response.status_code == 200:
                 result = response.json()
