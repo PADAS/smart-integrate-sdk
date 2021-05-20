@@ -1,14 +1,12 @@
-import json
 import logging
+from datetime import datetime, timedelta
 from typing import List, Dict, Any
 from uuid import UUID
-import requests
-from datetime import datetime, timedelta
+
 import pytz
-
-
+import requests
 from aiohttp import ClientSession, ClientResponseError
-from pydantic import parse_raw_as, parse_obj_as
+from pydantic import parse_obj_as
 
 from cdip_connector.core import cdip_settings
 from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation, DeviceState
@@ -24,6 +22,7 @@ class PortalApi:
         self.client_secret = cdip_settings.KEYCLOAK_CLIENT_SECRET
         self.integrations_endpoint = f'{cdip_settings.PORTAL_API_ENDPOINT}/integrations/inbound/configurations'
         self.device_states_endpoint = f'{cdip_settings.PORTAL_API_ENDPOINT}/devices/states'
+        self.devices_endpoint = f'{cdip_settings.PORTAL_API_ENDPOINT}/devices'
 
         self.oauth_token_url = cdip_settings.OAUTH_TOKEN_URL
         self.audience = cdip_settings.KEYCLOAK_AUDIENCE
@@ -54,7 +53,8 @@ class PortalApi:
         response.raise_for_status()
         token = await response.json()
         token = OAuthToken.parse_obj(token)
-        self.cached_token_expires_at = datetime.now(tz=pytz.utc) + timedelta(seconds=token.expires_in - 15) #fudge factor
+        self.cached_token_expires_at = datetime.now(tz=pytz.utc) + timedelta(
+            seconds=token.expires_in - 15)  # fudge factor
         self.cached_token = token
         return token
 
@@ -66,7 +66,8 @@ class PortalApi:
 
     async def get_authorized_integrations(self,
                                           session: ClientSession,
-                                          t_int_info: TIntegrationInformation = IntegrationInformation) -> List[IntegrationInformation]:
+                                          t_int_info: TIntegrationInformation = IntegrationInformation) -> List[
+        IntegrationInformation]:
         logger.debug(f'get_authorized_integrations for : {cdip_settings.KEYCLOAK_CLIENT_ID}')
         headers = await self.get_auth_header(session)
 
@@ -97,8 +98,8 @@ class PortalApi:
         response.raise_for_status()
 
         return await self.update_states_with_dict(session,
-                                                   integration_info.id,
-                                                   integration_info.device_states)
+                                                  integration_info.id,
+                                                  integration_info.device_states)
 
     async def fetch_device_states(self,
                                   session: ClientSession,
@@ -107,8 +108,8 @@ class PortalApi:
             headers = await self.get_auth_header(session)
 
             # This ought to be quick so just do it straight away.
-            response =  requests.get(url=f'{self.device_states_endpoint}/',
-                        params={'inbound_config_id': str(inbound_id)}, headers=headers, timeout=(3.1, 10))
+            response = requests.get(url=f'{self.device_states_endpoint}/',
+                                    params={'inbound_config_id': str(inbound_id)}, headers=headers, timeout=(3.1, 10))
             if response.status_code == 200:
                 result = response.json()
         except ClientResponseError as ex:
@@ -132,6 +133,28 @@ class PortalApi:
         states_dict = {s.device_external_id: s.state for s in device_state}
         return await self.update_states_with_dict(session, inbound_id, states_dict)
 
+    async def ensure_device(self,
+                            session: ClientSession,
+                            inbound_id: UUID,
+                            external_id: str):
+        # Post device ID and Integration ID combination to ensure it exists
+        # in the Portal's database and is also in the Integration's default
+        # device group.
+        headers = await self.get_auth_header(session)
+        payload = {
+            'external_id': external_id,
+            'inbound_configuration': inbound_id
+        }
+        response = await session.post(url=self.devices_endpoint, json=payload, headers=headers)
+        resp = await response.json()
+        print(resp)
+        if response.ok:
+            return True
+        else:
+            logger.error('Failed to post device to portal.', extra={**payload, **resp})
+
+        return False
+
     async def update_states_with_dict(self,
                                       session: ClientSession,
                                       inbound_id: UUID,
@@ -149,6 +172,6 @@ class PortalApi:
 
         headers = await self.get_auth_header(session)
         response = await session.get(url=f'{cdip_settings.PORTAL_API_ENDPOINT}/integrations/bridges/{bridge_id}',
-                                      headers=headers)
+                                     headers=headers)
         response.raise_for_status()
         return await response.json()
