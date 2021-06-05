@@ -16,7 +16,8 @@ logconfig.init()
 logger = logging.getLogger(__name__)
 logger.setLevel(cdip_settings.LOG_LEVEL)
 
-CLIENT_TIMEOUT_TOTAL=180 # seconds
+CLIENT_TIMEOUT_TOTAL = 180  # seconds
+
 
 # todo
 async def gather_with_semaphore(n, *tasks):
@@ -57,7 +58,8 @@ class AbstractConnector(ABC):
                 logger.info(result)
         except Exception as ex:
             self.metrics.incr_count(MetricsEnum.ERRORS)
-            logger.exception(f'Exception raised {ex}')
+            logger.exception('Uncaught exception in main.')
+            raise
 
     async def extract_load(self,
                            session: ClientSession,
@@ -68,17 +70,17 @@ class AbstractConnector(ABC):
         async for extracted in self.extract(session, integration):
 
             if extracted is not None:
-                logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
-                if extracted:
-                    logger.info(f'first transformed payload: {extracted[0]}')
+                logger.info(f'{integration.login}:{integration.id} {len(extracted)} records to send')
 
                 await self.load(session, extracted)
                 await self.update_state(session, integration)
 
                 self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
                 total += len(extracted)
+
         if not total:
             logger.info(f'{integration.login}:{integration.id} Nothing to send to SIntegrate')
+
         return total
 
     @abstractmethod
@@ -86,6 +88,9 @@ class AbstractConnector(ABC):
                       session: ClientSession,
                       integration_info: IntegrationInformation) -> AsyncGenerator[List[CDIPBaseModel], None]:
         s = yield 0  # unreachable, but makes the return type AsyncGenerator, expected by caller
+
+    def item_callback(self, item):
+        pass
 
     async def update_state(self,
                            session: ClientSession,
@@ -100,21 +105,28 @@ class AbstractConnector(ABC):
 
         def generate_batches(iterable, n=self.load_batch_size):
             for i in range(0, len(iterable), n):
-                yield iterable[i:i+n]    
+                yield iterable[i:i + n]
 
         logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
         for i, batch in enumerate(generate_batches(transformed_data)):
+
+            logger.debug(f'r1 is: {batch[0]}')
+            clean_batch = [json.loads(r.json()) for r in batch]
+
             for j in range(2):
-                logger.debug('sending batch no. %d, length=%d', i, len(batch))
-                clean_batch = [json.loads(r.json()) for r in batch]
+
+                logger.debug('sending batch.', extra={'batch_no': i, 'length': len(batch), 'attempt': j})
+
                 client_response = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
-                                        headers=headers,
-                                        json=clean_batch)
+                             headers=headers,
+                             json=clean_batch)
 
                 # Catch to attemp to re-authorized
                 if client_response.status == 401:
                     headers = await self.portal.get_auth_header(session)
                 else:
+                    [self.item_callback(item) for item in batch]
                     client_response.raise_for_status()
+                    break
 
 

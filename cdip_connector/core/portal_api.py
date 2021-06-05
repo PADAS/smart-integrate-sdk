@@ -162,7 +162,7 @@ class PortalApi:
         headers = await self.get_auth_header(session)
         response = await session.post(url=f'{self.device_states_endpoint}/update/{inbound_id}',
                                       headers=headers,
-                                      json=states_dict)
+                                      json=states_dict,)
         response.raise_for_status()
         text = await response.text()
         logger.info(f'update device_states resp: {response.status}')
