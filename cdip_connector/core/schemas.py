@@ -5,9 +5,9 @@ from typing import List, Optional, Dict, Any, Iterable
 from typing import TypeVar
 from typing import Union
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, HttpUrl, ValidationError
+from pydantic import BaseModel, Field, HttpUrl, ValidationError, validator
 
 logger = logging.getLogger(__name__)
 
@@ -66,22 +66,22 @@ class RadioStatusEnum(str, Enum):
 
 
 class Location(BaseModel):
-    x: float = Field(..., ge=-180.0, le=360.0)
-    y: float = Field(..., ge=-90.0, le=90.0)
-    z: float = Field(0.0)
+    x: float = Field(..., ge=-180.0, le=360.0, title="Longitude in decimal degrees")
+    y: float = Field(..., ge=-90.0, le=90.0, title="Latitude in decimal degrees")
+    z: float = Field(0.0, title='Altitude in meters.')
     hdop: Optional[int] = None
     vdop: Optional[int] = None
 
 
 class CDIPBaseModel(BaseModel, abc.ABC):
     id: Optional[int] = None
-    device_id: Optional[str] = 'none'
-    name: Optional[str] = None
-    type: Optional[str] = None
-    recorded_at: str
+    device_id: Optional[str] = Field('none', example='901870234', description='A unique identifier of the device associated with this data.')
+    name: Optional[str] = Field(None, title='An optional, human-friendly name for the associated device.', example='Security Vehicle A')
+    type: Optional[str] = Field('tracking-device', title='Type identifier for the associated device.', example='tracking-device',)
+    recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.', example='2021-03-21 12:01:02-0700')
     location: Location
     additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
-                                                 description="A dictionary of extra data that will be passed through.")
+                                                 description="A dictionary of extra data that will be passed to destination systems.")
 
     owner: str = 'na'
     integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
@@ -93,16 +93,40 @@ class CDIPBaseModel(BaseModel, abc.ABC):
     def stream_prefix():
         pass
 
+    @validator('recorded_at')
+    def clean_recorded_at(cls, val):
+
+        if not val.tzinfo:
+            val = val.replace(tzinfo=timezone.utc)
+        return val
 
 class Position(CDIPBaseModel):
 
-    voltage: Optional[float] = None
-    temperature: Optional[float] = None
-    radio_status: Optional[RadioStatusEnum]
+    voltage: Optional[float] = Field(None, title='Voltage of tracking device.')
+    temperature: Optional[float] = Field(None, title='Tempurature reading at time of Position.')
+    radio_status: Optional[RadioStatusEnum] = Field(None, title='Indicate status of a GPS radio.')
 
     class Config:
         title = 'Position'
 
+        schema_extra = {
+            "example": {
+                "device_id": '018910980',
+                "name": "Logistics Truck A",
+                "type": "tracking-device",
+                "recorded_at": "2021-03-27 11:15:00+0200",
+                "location": {
+                    "x": 35.43902,
+                    "y": -1.59083
+                },
+                "additional": {
+                    "voltage": "7.4",
+                    "fuel_level": 71,
+                    "speed": "41 kph",
+                }
+
+            }
+        }
     @staticmethod
     def stream_prefix():
         return StreamPrefixEnum.position.value
