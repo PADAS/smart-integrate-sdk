@@ -185,7 +185,7 @@ class OutboundConfiguration(BaseModel):
     password: Optional[str] = None
     token: Optional[str] = None
     type_slug: str
-    inbound_type_slug: str
+    inbound_type_slug: Optional[str] = None
     additional: Optional[Dict[str, Any]] = {}
 
 
