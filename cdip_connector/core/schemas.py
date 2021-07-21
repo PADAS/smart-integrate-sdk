@@ -16,6 +16,7 @@ class StreamPrefixEnum(str, Enum):
     position = 'ps'
     geoevent = 'ge'
     message = 'msg'
+    camera_trap = 'ct'
 
 
 class DestinationTypes(Enum):
@@ -163,6 +164,12 @@ class Message(BaseModel):
     @staticmethod
     def stream_prefix():
         return StreamPrefixEnum.message.value
+
+
+class CameraTrap(CDIPBaseModel):
+    image: str
+    camera_description: str
+    camera_version: str
 
 
 class IntegrationInformation(BaseModel):
