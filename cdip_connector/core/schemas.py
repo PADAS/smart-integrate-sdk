@@ -167,17 +167,24 @@ class Message(BaseModel):
 
 
 class CameraTrap(CDIPBaseModel):
-    image: str
+    image_uri: str
+    camera_name: str
     camera_description: str
     camera_version: str
 
+    @staticmethod
+    def stream_prefix():
+        return StreamPrefixEnum.camera_trap.value
+
 
 class IntegrationInformation(BaseModel):
-    login: str
-    password: str
-    token: str
-    endpoint: HttpUrl
     id: UUID
+    login: Optional[str]
+    password: Optional[str]
+    token: Optional[str]
+    endpoint: Optional[HttpUrl]
+    type_slug: Optional[str]
+    provider: Optional[str]
     state: Optional[Dict[str, Any]] = {}
     device_states: Optional[Dict[str, Any]] = {}
 
