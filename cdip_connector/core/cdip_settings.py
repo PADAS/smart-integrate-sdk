@@ -1,9 +1,15 @@
 import os
 from environs import Env
 
-cdip_sdk_envfile = os.environs.get('CDIP_SDK_ENVFILE', '.env')
+cdip_sdk_envfile = os.environs.get('CDIP_SDK_ENVFILE', None)
+
 env = Env()
-env.read_env(cdip_sdk_envfile)
+
+if cdip_sdk_envfile:
+    env.read_env(cdip_sdk_envfile)
+else:
+    # Default behavior
+    env.read_env()
 
 KEYCLOAK_ISSUER = env.str('KEYCLOAK_ISSUER', None)
 KEYCLOAK_CLIENT_ID = env.str('KEYCLOAK_CLIENT_ID', None)
