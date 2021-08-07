@@ -1,7 +1,7 @@
 import os
 from environs import Env
 
-cdip_sdk_envfile = os.environs.get('CDIP_SDK_ENVFILE', None)
+cdip_sdk_envfile = os.environ.get('CDIP_SDK_ENVFILE', None)
 
 env = Env()
 
