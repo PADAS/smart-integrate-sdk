@@ -178,6 +178,12 @@ class CameraTrap(CDIPBaseModel):
 
 
 class IntegrationInformation(BaseModel):
+    @validator('endpoint', pre=True)
+    def cleanse_endpoint(cls, endpoint):
+        if endpoint == '':
+            endpoint = None
+        return endpoint
+
     id: UUID
     login: Optional[str]
     password: Optional[str]
