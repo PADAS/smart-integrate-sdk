@@ -14,6 +14,6 @@ class TopicEnum(str, Enum):
     cameratrap_transformed = f'{APP_NAME}.cameratrap.transformed'
 
 
-class CloudStorage(str, Enum):
+class CloudStorageTypeEnum(str, Enum):
     google = 'google'
     local = 'local'
