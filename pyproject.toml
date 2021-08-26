@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cdip_connector"
-version = "0.8.1"
+version = "0.8.3"
 description = "SMART Integrate Connector Library"
 authors = [
     "Rohit Chaudhri <rohitc@vulcan.com>",

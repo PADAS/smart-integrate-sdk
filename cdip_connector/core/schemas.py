@@ -168,9 +168,9 @@ class Message(BaseModel):
 
 class CameraTrap(CDIPBaseModel):
     image_uri: str
-    camera_name: str
-    camera_description: str
-    camera_version: str
+    camera_name: Optional[str]
+    camera_description: Optional[str]
+    camera_version: Optional[str]
 
     @staticmethod
     def stream_prefix():
@@ -178,12 +178,6 @@ class CameraTrap(CDIPBaseModel):
 
 
 class IntegrationInformation(BaseModel):
-    @validator('endpoint', pre=True)
-    def cleanse_endpoint(cls, endpoint):
-        if endpoint == '':
-            endpoint = None
-        return endpoint
-
     id: UUID
     login: Optional[str]
     password: Optional[str]
@@ -193,6 +187,12 @@ class IntegrationInformation(BaseModel):
     provider: Optional[str]
     state: Optional[Dict[str, Any]] = {}
     device_states: Optional[Dict[str, Any]] = {}
+
+    @validator('endpoint', pre=True)
+    def cleanse_endpoint(cls, endpoint):
+        if endpoint == '':
+            endpoint = None
+        return endpoint
 
 
 class OutboundConfiguration(BaseModel):
