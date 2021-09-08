@@ -18,17 +18,6 @@ logger.setLevel(cdip_settings.LOG_LEVEL)
 
 CLIENT_TIMEOUT_TOTAL = 180  # seconds
 
-
-# todo
-async def gather_with_semaphore(n, *tasks):
-    semaphore = asyncio.Semaphore(n)
-
-    async def sem_task(task):
-        async with semaphore:
-            return await task
-    return await asyncio.gather(*(sem_task(task) for task in tasks))
-
-
 class AbstractConnector(ABC):
     DEFAULT_LOOKBACK_DAYS = cdip_settings.DEFAULT_LOOKBACK_DAYS
     DEFAULT_REQUESTS_TIMEOUT = (3.1, 20)
@@ -38,6 +27,7 @@ class AbstractConnector(ABC):
         self.portal = PortalApi()
         self.metrics = CdipMetrics()
         self.load_batch_size = 1000  # a default meant to be overridden as needed
+        self.semaphore = asyncio.Semaphore(4)
 
     def execute(self) -> None:
         self.metrics.incr_count(MetricsEnum.INVOKED)
@@ -50,12 +40,11 @@ class AbstractConnector(ABC):
                 logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
                 integration_info = await self.portal.get_authorized_integrations(session)
 
-                # todo gather_with_semaphore!
-                result = await asyncio.gather(*[
-                    self.extract_load(session, i) for i in integration_info
-                ])
-
+                result = [await self.extract_load(session, i) for i in integration_info]
+                # tasks = [asyncio.ensure_future(self.extract_load(session, i)) for i in integration_info]
+                # result = await asyncio.gather(*tasks)
                 logger.info(result)
+
         except Exception as ex:
             self.metrics.incr_count(MetricsEnum.ERRORS)
             logger.exception('Uncaught exception in main.')
@@ -64,24 +53,26 @@ class AbstractConnector(ABC):
     async def extract_load(self,
                            session: ClientSession,
                            integration: IntegrationInformation) -> int:
-        total = 0
-        device_states = await self.portal.fetch_device_states(session, integration.id)
-        integration.device_states = device_states
-        async for extracted in self.extract(session, integration):
 
-            if extracted is not None:
-                logger.info(f'{integration.login}:{integration.id} {len(extracted)} records to send')
+        async with self.semaphore:
+            total = 0
+            device_states = await self.portal.fetch_device_states(session, integration.id)
+            integration.device_states = device_states
+            async for extracted in self.extract(session, integration):
 
-                await self.load(session, extracted)
-                await self.update_state(session, integration)
+                if extracted is not None:
+                    logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
+                    if extracted:
+                        logger.info(f'first transformed payload: {extracted[0]}')
 
-                self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
-                total += len(extracted)
+                    await self.load(session, extracted)
+                    await self.update_state(session, integration)
 
-        if not total:
-            logger.info(f'{integration.login}:{integration.id} Nothing to send to SIntegrate')
-
-        return total
+                    self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
+                    total += len(extracted)
+            if not total:
+                logger.info(f'{integration.login}:{integration.id} Nothing to send to SIntegrate')
+            return total
 
     @abstractmethod
     async def extract(self,
