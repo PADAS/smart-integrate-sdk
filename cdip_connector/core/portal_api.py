@@ -48,7 +48,7 @@ class PortalApi:
         }
 
         response = await session.post(self.oauth_token_url,
-                                      data=payload)
+                                      data=payload, ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
 
         response.raise_for_status()
         token = await response.json()
@@ -73,7 +73,7 @@ class PortalApi:
 
         logger.debug(f'url: {self.integrations_endpoint}')
         response = await session.get(url=self.integrations_endpoint,
-                                     headers=headers)
+                                     headers=headers, ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
         response.raise_for_status()
         json_response = await response.json()
 
@@ -93,7 +93,8 @@ class PortalApi:
         response = await session.put(
             url=f'{self.integrations_endpoint}/{integration_info.id}',
             headers=headers,
-            json=dict(state=integration_info.state))
+            json=dict(state=integration_info.state),
+            ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
         logger.info(f'update integration state resp: {response.status}')
         response.raise_for_status()
 
@@ -109,7 +110,8 @@ class PortalApi:
 
             # This ought to be quick so just do it straight away.
             response = requests.get(url=f'{self.device_states_endpoint}/',
-                                    params={'inbound_config_id': str(inbound_id)}, headers=headers, timeout=(3.1, 10))
+                                    params={'inbound_config_id': str(inbound_id)}, headers=headers, timeout=(3.1, 10),
+                                    verify=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
             if response.status_code == 200:
                 result = response.json()
         except ClientResponseError as ex:
@@ -145,7 +147,7 @@ class PortalApi:
             'external_id': external_id,
             'inbound_configuration': inbound_id
         }
-        response = await session.post(url=self.devices_endpoint, json=payload, headers=headers)
+        response = await session.post(url=self.devices_endpoint, json=payload, headers=headers, ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
         resp = await response.json()
         print(resp)
         if response.ok:
@@ -162,7 +164,7 @@ class PortalApi:
         headers = await self.get_auth_header(session)
         response = await session.post(url=f'{self.device_states_endpoint}/update/{inbound_id}',
                                       headers=headers,
-                                      json=states_dict,)
+                                      json=states_dict, ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
         response.raise_for_status()
         text = await response.text()
         logger.info(f'update device_states resp: {response.status}')
@@ -172,6 +174,6 @@ class PortalApi:
 
         headers = await self.get_auth_header(session)
         response = await session.get(url=f'{cdip_settings.PORTAL_API_ENDPOINT}/integrations/bridges/{bridge_id}',
-                                     headers=headers)
+                                     headers=headers, ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
         response.raise_for_status()
         return await response.json()

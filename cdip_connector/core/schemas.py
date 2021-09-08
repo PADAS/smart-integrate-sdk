@@ -6,6 +6,7 @@ from typing import TypeVar
 from typing import Union
 from uuid import UUID
 from datetime import datetime, timezone
+import uuid
 
 from pydantic import BaseModel, Field, HttpUrl, ValidationError, validator
 
@@ -17,6 +18,7 @@ class StreamPrefixEnum(str, Enum):
     geoevent = 'ge'
     message = 'msg'
     camera_trap = 'ct'
+    earthranger_event = 'er_event'
 
 
 class DestinationTypes(Enum):
@@ -75,14 +77,7 @@ class Location(BaseModel):
 
 
 class CDIPBaseModel(BaseModel, abc.ABC):
-    id: Optional[int] = None
-    device_id: Optional[str] = Field('none', example='901870234', description='A unique identifier of the device associated with this data.')
-    name: Optional[str] = Field(None, title='An optional, human-friendly name for the associated device.', example='Security Vehicle A')
-    type: Optional[str] = Field('tracking-device', title='Type identifier for the associated device.', example='tracking-device',)
-    recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.', example='2021-03-21 12:01:02-0700')
-    location: Location
-    additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
-                                                 description="A dictionary of extra data that will be passed to destination systems.")
+    id: Optional[Union[int, uuid.UUID]] = None
 
     owner: str = 'na'
     integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
@@ -94,6 +89,20 @@ class CDIPBaseModel(BaseModel, abc.ABC):
     def stream_prefix():
         pass
 
+class Position(CDIPBaseModel):
+
+    device_id: Optional[str] = Field('none', example='901870234', description='A unique identifier of the device associated with this data.')
+    name: Optional[str] = Field(None, title='An optional, human-friendly name for the associated device.', example='Security Vehicle A')
+    type: Optional[str] = Field('tracking-device', title='Type identifier for the associated device.', example='tracking-device',)
+    recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.', example='2021-03-21 12:01:02-0700')
+    location: Location
+    additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
+                                                 description="A dictionary of extra data that will be passed to destination systems.")
+
+    voltage: Optional[float] = Field(None, title='Voltage of tracking device.')
+    temperature: Optional[float] = Field(None, title='Tempurature reading at time of Position.')
+    radio_status: Optional[RadioStatusEnum] = Field(None, title='Indicate status of a GPS radio.')
+
     @validator('recorded_at')
     def clean_recorded_at(cls, val):
 
@@ -101,11 +110,6 @@ class CDIPBaseModel(BaseModel, abc.ABC):
             val = val.replace(tzinfo=timezone.utc)
         return val
 
-class Position(CDIPBaseModel):
-
-    voltage: Optional[float] = Field(None, title='Voltage of tracking device.')
-    temperature: Optional[float] = Field(None, title='Tempurature reading at time of Position.')
-    radio_status: Optional[RadioStatusEnum] = Field(None, title='Indicate status of a GPS radio.')
 
     class Config:
         title = 'Position'
@@ -135,6 +139,12 @@ class Position(CDIPBaseModel):
 
 class GeoEvent(CDIPBaseModel):
 
+    device_id: Optional[str] = Field('none', example='901870234', description='A unique identifier of the device associated with this data.')
+    recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.', example='2021-03-21 12:01:02-0700')
+    location: Location
+    additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
+                                                 description="A dictionary of extra data that will be passed to destination systems.")
+
     title: str = Field(None, title='GeoEvent title',
                        description='Human-friendly title for this GeoEvent')
     event_type: str = Field(None, title='GeoEvent Type',
@@ -146,9 +156,65 @@ class GeoEvent(CDIPBaseModel):
     class Config:
         title = 'GeoEvent'
 
+    @validator('recorded_at')
+    def clean_recorded_at(cls, val):
+
+        if not val.tzinfo:
+            val = val.replace(tzinfo=timezone.utc)
+        return val
+
     @staticmethod
     def stream_prefix():
         return StreamPrefixEnum.geoevent.value
+
+
+class EREventState(str, Enum):
+    active = 'active'
+    closed = 'resolved'
+    new = 'new'
+
+class ERLocation(BaseModel):
+    latitude: float
+    longitude: float
+
+class EREvent(CDIPBaseModel):
+    er_uuid: uuid.UUID = Field(None, alias='id')
+    owner: str = 'na'
+    location: Optional[ERLocation]
+    time: datetime
+    created_at: datetime
+    updated_at: datetime
+    serial_number: int
+    event_type: str
+    priority: int
+    priority_label: str
+    title: Optional[str]
+    state: EREventState
+    url: str
+    event_details: Dict[str, Any]
+
+    uri: Optional[str] = Field('', example='https://site.pamdas.org/api/v1.0/activity/events/<id>',
+                                            description='The EarthRanger site where this event was created.')
+    device_id: Optional[str] = Field('none', example='dev-00011',
+                                     description='A unique identifier of the device/unit associated with this data.')
+    integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
+                                                       description='The unique ID for the '
+                                                                   'Smart Integrate Inbound Integration.')
+    @validator('state')
+    def clean_sender(cls, val):
+        if val == 'new':
+            return 'active'
+        return val
+
+    @validator('device_id')
+    def calculate_device_id(cls, v, values, **kwargs):
+        if 'event_type' in values:
+            return f'eventtype:{values["event_type"]}'
+        return v
+
+    @staticmethod
+    def stream_prefix():
+        return StreamPrefixEnum.earthranger_event.value
 
 
 class Message(BaseModel):
@@ -167,6 +233,14 @@ class Message(BaseModel):
 
 
 class CameraTrap(CDIPBaseModel):
+
+    device_id: Optional[str] = Field('none', example='901870234', description='A unique identifier of the device associated with this data.')
+    name: Optional[str] = Field(None, title='An optional, human-friendly name for the associated device.', example='Camera no. 1')
+    type: Optional[str] = Field('camerea-trap', title='Type identifier for the associated device.', example='camera-trap',)
+    recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.', example='2021-03-21 12:01:02-0700')
+    location: Location
+    additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
+                                                 description="A dictionary of extra data that will be passed to destination systems.")
     image_uri: str
     camera_name: Optional[str]
     camera_description: Optional[str]
@@ -211,7 +285,8 @@ class OutboundConfiguration(BaseModel):
 
 models_by_stream_type = {
     StreamPrefixEnum.position: Position,
-    StreamPrefixEnum.geoevent: GeoEvent
+    StreamPrefixEnum.geoevent: GeoEvent,
+    StreamPrefixEnum.earthranger_event: EREvent,
 }
 
 TIntegrationInformation = TypeVar("TIntegrationInformation", bound=IntegrationInformation)
