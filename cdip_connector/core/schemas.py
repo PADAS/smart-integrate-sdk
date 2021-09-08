@@ -233,6 +233,14 @@ class Message(BaseModel):
 
 
 class CameraTrap(CDIPBaseModel):
+
+    device_id: Optional[str] = Field('none', example='901870234', description='A unique identifier of the device associated with this data.')
+    name: Optional[str] = Field(None, title='An optional, human-friendly name for the associated device.', example='Camera no. 1')
+    type: Optional[str] = Field('camerea-trap', title='Type identifier for the associated device.', example='camera-trap',)
+    recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.', example='2021-03-21 12:01:02-0700')
+    location: Location
+    additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
+                                                 description="A dictionary of extra data that will be passed to destination systems.")
     image_uri: str
     camera_name: Optional[str]
     camera_description: Optional[str]
