@@ -27,7 +27,6 @@ class AbstractConnector(ABC):
         self.portal = PortalApi()
         self.metrics = CdipMetrics()
         self.load_batch_size = 1000  # a default meant to be overridden as needed
-        self.semaphore = asyncio.Semaphore(4)
 
     def execute(self) -> None:
         self.metrics.incr_count(MetricsEnum.INVOKED)
@@ -54,25 +53,24 @@ class AbstractConnector(ABC):
                            session: ClientSession,
                            integration: IntegrationInformation) -> int:
 
-        async with self.semaphore:
-            total = 0
-            device_states = await self.portal.fetch_device_states(session, integration.id)
-            integration.device_states = device_states
-            async for extracted in self.extract(session, integration):
+        total = 0
+        device_states = await self.portal.fetch_device_states(session, integration.id)
+        integration.device_states = device_states
+        async for extracted in self.extract(session, integration):
 
-                if extracted is not None:
-                    logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
-                    if extracted:
-                        logger.info(f'first transformed payload: {extracted[0]}')
+            if extracted is not None:
+                logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
+                if extracted:
+                    logger.info(f'first transformed payload: {extracted[0]}')
 
-                    await self.load(session, extracted)
-                    await self.update_state(session, integration)
+                await self.load(session, extracted)
+                await self.update_state(session, integration)
 
-                    self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
-                    total += len(extracted)
-            if not total:
-                logger.info(f'{integration.login}:{integration.id} Nothing to send to SIntegrate')
-            return total
+                self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
+                total += len(extracted)
+        if not total:
+            logger.info(f'{integration.login}:{integration.id} Nothing to send to SIntegrate')
+        return total
 
     @abstractmethod
     async def extract(self,
