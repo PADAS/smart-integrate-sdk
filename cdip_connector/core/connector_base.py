@@ -108,7 +108,8 @@ class AbstractConnector(ABC):
 
                 client_response = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
                              headers=headers,
-                             json=clean_batch)
+                             json=clean_batch,
+                             ssl=cdip_settings.CDIP_API_SSL_VERIFY)
 
                 # Catch to attemp to re-authorized
                 if client_response.status == 401:
