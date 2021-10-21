@@ -4,6 +4,9 @@ APP_NAME = 'sintegrate'
 
 
 class TopicEnum(str, Enum):
+    observations_unprocessed = f'{APP_NAME}.observations.unprocessed'
+    observations_transformed = f'{APP_NAME}.observations.transformed'
+    #TODO: These can be removed once formally on single topic
     positions_unprocessed = f'{APP_NAME}.positions.unprocessed'
     positions_transformed = f'{APP_NAME}.positions.transformed'
     geoevent_unprocessed = f'{APP_NAME}.geoevent.unprocessed'

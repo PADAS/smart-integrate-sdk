@@ -19,6 +19,7 @@ class StreamPrefixEnum(str, Enum):
     message = 'msg'
     camera_trap = 'ct'
     earthranger_event = 'er_event'
+    observation = 'obv'
 
 
 class DestinationTypes(Enum):
@@ -251,7 +252,7 @@ class CameraTrap(CDIPBaseModel):
         return StreamPrefixEnum.camera_trap.value
 
 
-class Sensor(BaseModel):
+class Observation(CDIPBaseModel):
     device_id: str = Field('none', example='901870234',
                                      description='A unique identifier of the device associated with this data.')
     recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.',
@@ -259,13 +260,10 @@ class Sensor(BaseModel):
     location: Optional[Location]
     additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
                                                  description="A dictionary of extra data that will be passed to destination systems.")
-    integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
-                                                       description='The unique ID for the '
-                                                                   'Smart Integrate Inbound Integration.')
 
     @staticmethod
     def stream_prefix():
-        return StreamPrefixEnum.sensor.value
+        return StreamPrefixEnum.observation.value
 
     @validator('recorded_at')
     def clean_recorded_at(cls, val):
