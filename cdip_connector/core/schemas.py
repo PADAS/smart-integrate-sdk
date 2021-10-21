@@ -251,6 +251,29 @@ class CameraTrap(CDIPBaseModel):
         return StreamPrefixEnum.camera_trap.value
 
 
+class Sensor(BaseModel):
+    device_id: str = Field('none', example='901870234',
+                                     description='A unique identifier of the device associated with this data.')
+    recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.',
+                                  example='2021-03-21 12:01:02-0700')
+    location: Optional[Location]
+    additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
+                                                 description="A dictionary of extra data that will be passed to destination systems.")
+    integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
+                                                       description='The unique ID for the '
+                                                                   'Smart Integrate Inbound Integration.')
+
+    @staticmethod
+    def stream_prefix():
+        return StreamPrefixEnum.sensor.value
+
+    @validator('recorded_at')
+    def clean_recorded_at(cls, val):
+        if not val.tzinfo:
+            val = val.replace(tzinfo=timezone.utc)
+        return val
+
+
 class IntegrationInformation(BaseModel):
     id: UUID
     login: Optional[str]
