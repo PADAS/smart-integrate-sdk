@@ -258,6 +258,10 @@ class Observation(CDIPBaseModel):
     recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.',
                                   example='2021-03-21 12:01:02-0700')
     location: Optional[Location]
+    name: Optional[str] = Field(None, title='An optional, human-friendly name for the associated device.',
+                                example='Security Vehicle A')
+    type: Optional[str] = Field(None, title='Type identifier for the associated device.', example='static-sensor',)
+
     additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
                                                  description="A dictionary of extra data that will be passed to destination systems.")
 
