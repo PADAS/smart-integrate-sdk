@@ -76,6 +76,10 @@ class Location(BaseModel):
     hdop: Optional[int] = None
     vdop: Optional[int] = None
 
+    @staticmethod
+    def default_location():
+        return Location(x=0.0, y=0.0)
+
 
 class CDIPBaseModel(BaseModel, abc.ABC):
     id: Optional[Union[int, uuid.UUID]] = None
@@ -306,6 +310,17 @@ class OutboundConfiguration(BaseModel):
     type_slug: str
     inbound_type_slug: Optional[str] = None
     additional: Optional[Dict[str, Any]] = {}
+
+
+class AdditionalDeviceDetail(BaseModel):
+    location: Optional[Location]
+
+
+class Device(BaseModel):
+    id: UUID
+    external_id: Optional[str]
+    inbound_configuration: UUID
+    additional: Optional[AdditionalDeviceDetail]
 
 
 models_by_stream_type = {
