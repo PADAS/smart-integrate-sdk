@@ -76,10 +76,6 @@ class Location(BaseModel):
     hdop: Optional[int] = None
     vdop: Optional[int] = None
 
-    @staticmethod
-    def default_location():
-        return Location(x=0.0, y=0.0)
-
 
 class CDIPBaseModel(BaseModel, abc.ABC):
     id: Optional[Union[int, uuid.UUID]] = None
