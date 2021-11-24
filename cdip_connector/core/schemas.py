@@ -308,6 +308,17 @@ class OutboundConfiguration(BaseModel):
     additional: Optional[Dict[str, Any]] = {}
 
 
+class AdditionalDeviceDetail(BaseModel):
+    location: Optional[Location]
+
+
+class Device(BaseModel):
+    id: UUID
+    external_id: Optional[str]
+    inbound_configuration: UUID
+    additional: Optional[AdditionalDeviceDetail]
+
+
 models_by_stream_type = {
     StreamPrefixEnum.position: Position,
     StreamPrefixEnum.geoevent: GeoEvent,
