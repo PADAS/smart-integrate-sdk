@@ -85,10 +85,6 @@ class CDIPBaseModel(BaseModel, abc.ABC):
                                                   description='The unique ID for the '
                                                               'Smart Integrate Inbound Integration.')
 
-    @staticmethod
-    @abc.abstractmethod
-    def stream_prefix():
-        pass
 
 class Position(CDIPBaseModel):
 
@@ -103,6 +99,7 @@ class Position(CDIPBaseModel):
     voltage: Optional[float] = Field(None, title='Voltage of tracking device.')
     temperature: Optional[float] = Field(None, title='Tempurature reading at time of Position.')
     radio_status: Optional[RadioStatusEnum] = Field(None, title='Indicate status of a GPS radio.')
+    observation_type: str = Field(StreamPrefixEnum.position.value, const=True)
 
     @validator('recorded_at')
     def clean_recorded_at(cls, val):
@@ -133,9 +130,6 @@ class Position(CDIPBaseModel):
 
             }
         }
-    @staticmethod
-    def stream_prefix():
-        return StreamPrefixEnum.position.value
 
 
 class GeoEvent(CDIPBaseModel):
@@ -153,6 +147,7 @@ class GeoEvent(CDIPBaseModel):
 
     event_details: Dict[str, Any] = Field(None, title="GeoEvent Details",
                                           description="A dictionary containing details of this GeoEvent.")
+    observation_type: str = Field(StreamPrefixEnum.geoevent.value, const=True)
 
     class Config:
         title = 'GeoEvent'
@@ -163,10 +158,6 @@ class GeoEvent(CDIPBaseModel):
         if not val.tzinfo:
             val = val.replace(tzinfo=timezone.utc)
         return val
-
-    @staticmethod
-    def stream_prefix():
-        return StreamPrefixEnum.geoevent.value
 
 
 class EREventState(str, Enum):
@@ -201,6 +192,8 @@ class EREvent(CDIPBaseModel):
     integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
                                                        description='The unique ID for the '
                                                                    'Smart Integrate Inbound Integration.')
+    observation_type: str = Field(StreamPrefixEnum.earthranger_event.value, const=True)
+
     @validator('state')
     def clean_sender(cls, val):
         if val == 'new':
@@ -213,10 +206,6 @@ class EREvent(CDIPBaseModel):
             return f'eventtype:{values["event_type"]}'
         return v
 
-    @staticmethod
-    def stream_prefix():
-        return StreamPrefixEnum.earthranger_event.value
-
 
 class Message(BaseModel):
     owner: str = 'na'
@@ -227,10 +216,7 @@ class Message(BaseModel):
     text: str
     sender: str
     device_ids: List[str]
-
-    @staticmethod
-    def stream_prefix():
-        return StreamPrefixEnum.message.value
+    observation_type: str = Field(StreamPrefixEnum.message.value, const=True)
 
 
 class CameraTrap(CDIPBaseModel):
@@ -246,12 +232,10 @@ class CameraTrap(CDIPBaseModel):
     camera_name: Optional[str]
     camera_description: Optional[str]
     camera_version: Optional[str]
-
-    @staticmethod
-    def stream_prefix():
-        return StreamPrefixEnum.camera_trap.value
+    observation_type: str = Field(StreamPrefixEnum.camera_trap.value, const=True)
 
 
+# TODO: determine purpose for this type. Original intent was for generic model to represent static sensor
 class Observation(CDIPBaseModel):
     device_id: str = Field('none', example='901870234',
                                      description='A unique identifier of the device associated with this data.')
@@ -264,10 +248,7 @@ class Observation(CDIPBaseModel):
 
     additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
                                                  description="A dictionary of extra data that will be passed to destination systems.")
-
-    @staticmethod
-    def stream_prefix():
-        return StreamPrefixEnum.observation.value
+    observation_type: str = Field(StreamPrefixEnum.observation.value, const=True)
 
     @validator('recorded_at')
     def clean_recorded_at(cls, val):
@@ -323,6 +304,9 @@ models_by_stream_type = {
     StreamPrefixEnum.position: Position,
     StreamPrefixEnum.geoevent: GeoEvent,
     StreamPrefixEnum.earthranger_event: EREvent,
+    StreamPrefixEnum.camera_trap: CameraTrap,
+    StreamPrefixEnum.observation: Observation,
+    StreamPrefixEnum.message: Message
 }
 
 TIntegrationInformation = TypeVar("TIntegrationInformation", bound=IntegrationInformation)
