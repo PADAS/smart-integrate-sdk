@@ -296,6 +296,7 @@ class AdditionalDeviceDetail(BaseModel):
 class Device(BaseModel):
     id: UUID
     external_id: Optional[str]
+    name: Optional[str]
     inbound_configuration: UUID
     additional: Optional[AdditionalDeviceDetail]
 
