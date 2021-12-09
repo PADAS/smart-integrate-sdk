@@ -91,6 +91,7 @@ class Position(CDIPBaseModel):
     device_id: Optional[str] = Field('none', example='901870234', description='A unique identifier of the device associated with this data.')
     name: Optional[str] = Field(None, title='An optional, human-friendly name for the associated device.', example='Security Vehicle A')
     type: Optional[str] = Field('tracking-device', title='Type identifier for the associated device.', example='tracking-device',)
+    subject_type: Optional[str] = Field(None, title='Type identifier for the subjected associated to the device.', example='giraffe', )
     recorded_at: datetime = Field(..., title='Timestamp for the data, preferrably in ISO format.', example='2021-03-21 12:01:02-0700')
     location: Location
     additional: Optional[Dict[str, Any]] = Field(None, title="Additional Data",
@@ -297,6 +298,7 @@ class Device(BaseModel):
     id: UUID
     external_id: Optional[str]
     name: Optional[str]
+    subject_type: Optional[str]
     inbound_configuration: UUID
     additional: Optional[AdditionalDeviceDetail]
 
