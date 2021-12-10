@@ -151,7 +151,7 @@ class PortalApi:
         resp = await response.json()
         print(resp)
         if response.ok:
-            return Device.parse_obj(resp.json())
+            return Device.parse_obj(resp)
         else:
             logger.error('Failed to post device to portal.', extra={**payload, **resp})
 
