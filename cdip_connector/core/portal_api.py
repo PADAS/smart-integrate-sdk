@@ -149,9 +149,9 @@ class PortalApi:
         }
         response = await session.post(url=self.devices_endpoint, json=payload, headers=headers, ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
         resp = await response.json()
-        print(resp)
+        # print(resp)
         if response.ok:
-            return Device.parse_obj(resp)
+            return resp
         else:
             logger.error('Failed to post device to portal.', extra={**payload, **resp})
 
