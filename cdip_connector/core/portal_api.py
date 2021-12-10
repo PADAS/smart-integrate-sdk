@@ -9,7 +9,7 @@ from aiohttp import ClientSession, ClientResponseError
 from pydantic import parse_obj_as
 
 from cdip_connector.core import cdip_settings
-from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation, DeviceState
+from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation, DeviceState, Device
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cdip_settings.LOG_LEVEL)
@@ -151,11 +151,11 @@ class PortalApi:
         resp = await response.json()
         print(resp)
         if response.ok:
-            return True
+            return Device.parse_obj(resp.json())
         else:
             logger.error('Failed to post device to portal.', extra={**payload, **resp})
 
-        return False
+        return None
 
     async def update_states_with_dict(self,
                                       session: ClientSession,
