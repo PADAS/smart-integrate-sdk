@@ -9,7 +9,7 @@ from aiohttp import ClientSession, ClientResponseError
 from pydantic import parse_obj_as
 
 from cdip_connector.core import cdip_settings
-from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation, DeviceState, Device
+from .schemas import IntegrationInformation, OAuthToken, TIntegrationInformation, DeviceState
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cdip_settings.LOG_LEVEL)
