@@ -149,13 +149,13 @@ class PortalApi:
         }
         response = await session.post(url=self.devices_endpoint, json=payload, headers=headers, ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY)
         resp = await response.json()
-        print(resp)
+        # print(resp)
         if response.ok:
-            return True
+            return resp
         else:
             logger.error('Failed to post device to portal.', extra={**payload, **resp})
 
-        return False
+        return None
 
     async def update_states_with_dict(self,
                                       session: ClientSession,
