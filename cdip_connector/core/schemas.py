@@ -25,6 +25,7 @@ class StreamPrefixEnum(str, Enum):
 class DestinationTypes(Enum):
     EarthRanger = 'earth_ranger'
     SmartConnect = 'smart_connect'
+    WPSWatch = 'wps_watch'
 
 
 class EventTypes(str, Enum):
