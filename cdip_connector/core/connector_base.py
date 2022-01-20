@@ -26,7 +26,7 @@ class AbstractConnector(ABC):
         super().__init__()
         self.portal = PortalApi()
         self.metrics = CdipMetrics()
-        self.load_batch_size = 1000  # a default meant to be overridden as needed
+        self.load_batch_size = 100  # a default meant to be overridden as needed
 
     def execute(self) -> None:
         self.metrics.incr_count(MetricsEnum.INVOKED)
