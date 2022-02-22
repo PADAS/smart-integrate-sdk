@@ -101,7 +101,6 @@ class AbstractConnector(ABC):
                 f'{self.request_schema.configuration.username}:{self.request_schema.configuration.integration_id} Nothing to send to SIntegrate')
         return total
 
-    """
     async def get_integration_info(self, integration_id: str) -> IntegrationInformation:
         try:
             async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL)) as session:
@@ -112,7 +111,6 @@ class AbstractConnector(ABC):
             self.metrics.incr_count(MetricsEnum.ERRORS)
             logger.exception('Uncaught exception in get_integration_info.')
             raise
-    """
 
     @abstractmethod
     async def extract(self,
