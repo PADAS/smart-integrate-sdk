@@ -96,15 +96,18 @@ class AbstractConnector(ABC):
             for i in range(0, len(iterable), n):
                 yield iterable[i:i + n]
 
-        logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
         for i, batch in enumerate(generate_batches(transformed_data)):
+
+
+            logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
 
             logger.debug(f'r1 is: {batch[0]}')
             clean_batch = [json.loads(r.json()) for r in batch]
 
             for j in range(2):
 
-                logger.debug('sending batch.', extra={'batch_no': i, 'length': len(batch), 'attempt': j})
+                logger.debug('sending batch.', extra={'batch_no': i, 'length': len(batch), 
+                    'attempt': j, 'api': cdip_settings.CDIP_API_ENDPOINT})
 
                 client_response = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
                              headers=headers,

@@ -269,6 +269,8 @@ class IntegrationInformation(BaseModel):
     provider: Optional[str]
     state: Optional[Dict[str, Any]] = {}
     device_states: Optional[Dict[str, Any]] = {}
+    enabled: bool
+    name: str
 
     @validator('endpoint', pre=True)
     def cleanse_endpoint(cls, endpoint):
