@@ -63,21 +63,43 @@ class PortalApi:
             "authorization": f"{token_object.token_type} {token_object.access_token}"
         }
 
-    async def get_integration_state(self,
-                                    session: ClientSession,
-                                    integration_id: str,
-                                    t_int_info: TIntegrationInformation = IntegrationInformation) -> IntegrationInformation:
+    async def get_states(self,
+                         session: ClientSession,
+                         integration_id: str,
+                         t_int_info: TIntegrationInformation = IntegrationInformation) -> IntegrationInformation:
         headers = await self.get_auth_header(session)
-        response = await session.get(url=self.integrations_endpoint, headers=headers, ssl=True)
-        response.raise_for_status()
-        json_response = await response.json()
+        state_response = await session.get(url=self.integrations_endpoint, headers=headers, ssl=True)
+        state_response.raise_for_status()
+        json_response = await state_response.json()
 
         if isinstance(json_response, dict):
             json_response = [json_response]
 
         json_response = next((item for item in json_response if item['id'] == integration_id), None)
 
-        return t_int_info.parse_obj(json_response).state
+        integration_state = t_int_info.parse_obj(json_response).state
+
+        try:
+            device_states_response = requests.get(url=f'{self.device_states_endpoint}/',
+                                                  params={'inbound_config_id': integration_id}, headers=headers,
+                                                  timeout=(3.1, 10),
+                                                  verify=True)
+            if device_states_response.status_code == 200:
+                device_states_result = device_states_response.json()
+        except ClientResponseError as ex:
+            logger.exception('Failed to get devices for iic: {inbound_id}')
+        else:
+            states_received = parse_obj_as(List[DeviceState], device_states_result)
+            # todo: cleanup after all functions have their device state migrated over
+            states_asdict = {}
+            for s in states_received:
+                if isinstance(s.state, dict) and 'value' in s.state:
+                    states_asdict[s.device_external_id] = s.state.get('value')
+                else:
+                    states_asdict[s.device_external_id] = s.state
+            device_states = states_asdict
+
+        return device_states, integration_state
 
     async def update_state(self,
                            session: ClientSession,
@@ -92,7 +114,9 @@ class PortalApi:
         logger.info(f'update integration state resp: {response.status}')
         response.raise_for_status()
 
-        return await self.update_states_with_dict(session, payload.integration_id, payload.device_states)
+        return await self.update_states_with_dict(session,
+                                                  payload.integration_id,
+                                                  payload.device_states)
 
     async def fetch_device_states(self,
                                   session: ClientSession,
@@ -155,7 +179,8 @@ class PortalApi:
                                       states_dict: Dict[str, Any]):
         headers = await self.get_auth_header(session)
         response = await session.post(url=f'{self.device_states_endpoint}/update/{inbound_id}',
-                                      headers=headers, json=states_dict, ssl=True)
+                                      headers=headers,
+                                      json=states_dict, ssl=True)
         response.raise_for_status()
         text = await response.text()
         logger.info(f'update device_states resp: {response.status}')

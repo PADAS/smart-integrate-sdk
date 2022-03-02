@@ -2,14 +2,22 @@
 
 Base library for building data source extractors.
 
-## Developing this Library
+### CHANGELOG
 
-### Prerequisites
+- [1.0.7](https://github.com/PADAS/smart-integrate-sdk/releases/tag/v1.0.7): New action/configuration approach. 
+
+  Related branch: [integrations-core-redesign](https://github.com/PADAS/smart-integrate-sdk/tree/integrations-core-redesign)
+
+  FURTHER READING: [Software Requirement Specification](https://docs.google.com/document/d/1oCKqW6ryU662V-AIRy_AdwhjLGpWnBj_/edit?pli=1#)
+
+## Building process
+
+### Pre requisites
 
 * Python 3.7+
 
 * [Poetry](https://python-poetry.org/) (recommended). 
-  Install Poetry to get started.
+  Install Poetry to get started (Homebrew).
 
 ### Initialize your Environment
 

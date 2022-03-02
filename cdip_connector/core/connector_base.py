@@ -31,6 +31,20 @@ class AbstractConnector(ABC):
         self.load_batch_size = 1000  # a default meant to be overridden as needed
 
     def execute_action(self):
+        """
+            Executes an specific action within an already-set schema
+
+            AVAILABLE ACTIONS:
+
+            - "test_login": Get payload info and try to authenticate into external API
+
+            - "fetch_samples": With payload info, go to the integration 'extract' code and fetch a few samples (pydantic model)
+
+            - "extract_and_load": With payload info, executes integration 'extract' and then transform the data to be posted to ER
+
+            :param self: The complete request schema (self.request_schema)
+            :return: JSON with the result and status
+        """
         self.metrics.incr_count(MetricsEnum.INVOKED)
 
         logger.info(f'EXECUTING ACTION: {self.request_schema.action}')
@@ -41,6 +55,12 @@ class AbstractConnector(ABC):
         return {"result": message}, status
 
     async def test_login(self):
+        """
+            Get payload info and try to authenticate into external API
+
+            :param self: The complete request schema (self.request_schema)
+            :return: JSON with the result and status
+        """
         try:
             async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL)) as session:
                 result = await self.authenticate(
@@ -58,6 +78,13 @@ class AbstractConnector(ABC):
             return "An error occurred.", 500
 
     async def extract_and_load(self):
+        """
+            With payload info, executes integration 'extract' and then transform the data to be posted to ER,
+            then the state is updated to latest timestamp (integration)
+
+            :param self: The complete request schema (self.request_schema)
+            :return: JSON with the result and status
+        """
         try:
             async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL)) as session:
                 result = [await self.extract_load(session)]
@@ -69,9 +96,15 @@ class AbstractConnector(ABC):
             return "An error occurred.", 500
 
     async def fetch_samples(self):
+        """
+            With payload info, go to the integration 'extract' code and fetch a few samples (pydantic model)
+
+            :param self: The complete request schema (self.request_schema)
+            :return: JSON with the result and status
+        """
         try:
             async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL)) as session:
-                async for extracted in self.extract(session, self.request_schema.configuration):
+                async for extracted in self.extract(session, self.request_schema):
                     return extracted[:3], 200
         except Exception as ex:
             self.metrics.incr_count(MetricsEnum.ERRORS)
@@ -80,11 +113,10 @@ class AbstractConnector(ABC):
 
     async def extract_load(self, session: ClientSession) -> int:
         total = 0
-        device_states = await self.portal.fetch_device_states(session, self.request_schema.configuration.integration_id)
-        integration_state = await self.portal.get_integration_state(session, self.request_schema.configuration.integration_id)
+        device_states, integration_state = await self.portal.get_states(session, self.request_schema.configuration.integration_id)
         self.request_schema.configuration.device_states = device_states
         self.request_schema.configuration.state = integration_state
-        async for extracted in self.extract(session, self.request_schema.configuration):
+        async for extracted in self.extract(session, self.request_schema):
             if extracted is not None:
                 logger.info(
                     f'{self.request_schema.configuration.username}:{self.request_schema.configuration.integration_id} {len(extracted)} recs to send')
@@ -101,6 +133,7 @@ class AbstractConnector(ABC):
                 f'{self.request_schema.configuration.username}:{self.request_schema.configuration.integration_id} Nothing to send to SIntegrate')
         return total
 
+    """
     async def get_integration_info(self, integration_id: str) -> IntegrationInformation:
         try:
             async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL)) as session:
@@ -111,6 +144,7 @@ class AbstractConnector(ABC):
             self.metrics.incr_count(MetricsEnum.ERRORS)
             logger.exception('Uncaught exception in get_integration_info.')
             raise
+    """
 
     @abstractmethod
     async def extract(self,
