@@ -47,10 +47,17 @@ class AbstractConnector(ABC):
         """
         self.metrics.incr_count(MetricsEnum.INVOKED)
 
-        logger.info(f'EXECUTING ACTION: {self.request_schema.action}')
+        try:
+            logger.info(f'EXECUTING ACTION: {self.request_schema.action}')
 
-        action_function = getattr(self, self.request_schema.action)
-        message, status = asyncio.run(action_function())
+            action_function = getattr(self, self.request_schema.action)
+            message, status = asyncio.run(action_function())
+
+        except Exception as e:
+            logger.exception(f'Failed when executing action: {self.request_schema.action}',
+                             extra={'needs_attention': True})
+            logger.exception(f'Reason: {e}')
+            message, status = f'Error executing action: {self.request_schema.action}', 500
 
         return {"result": message}, status
 
