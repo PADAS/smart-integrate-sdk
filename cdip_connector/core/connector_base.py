@@ -178,7 +178,7 @@ class AbstractConnector(ABC):
                 yield iterable[i:i + n]
 
         logger.info(f'Posting to: {self.request_schema.configuration.sensors_api_url}')
-        for i, batch in enumerate(generate_batches(transformed_data[:10])):
+        for i, batch in enumerate(generate_batches(transformed_data)):
 
             logger.debug(f'r1 is: {batch[0]}')
             clean_batch = [json.loads(r.json()) for r in batch]
