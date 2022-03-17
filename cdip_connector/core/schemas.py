@@ -209,6 +209,28 @@ class EREvent(CDIPBaseModel):
         return v
 
 
+class ERPatrolSegment(BaseModel):
+    end_location: Optional[ERLocation]
+    events: Optional[List[dict]] # need to test
+    id: str
+    leader: Optional[dict]
+    patrol_type: str
+    schedule_start: Optional[dict] # need to test
+    schedule_end: Optional[dict]  # need to test
+    start_location: Optional[ERLocation]
+    time_range: Optional[dict]
+
+
+class ERPatrol(CDIPBaseModel):
+    files: Optional[List[str]] # Need to test
+    id: str
+    device_id: Optional[str]
+    notes: Optional[List[dict]]
+    objective: Optional[str] # need to test
+    patrol_segments: Optional[List[ERPatrolSegment]] # how to handle multiple ?
+    observation_type: str = Field(StreamPrefixEnum.earthranger_patrol.value, const=True)
+
+
 class Message(BaseModel):
     owner: str = 'na'
     integration_id: Optional[Union[UUID, str]] = Field(None, title='Integration ID',
