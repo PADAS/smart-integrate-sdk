@@ -19,6 +19,7 @@ class StreamPrefixEnum(str, Enum):
     message = 'msg'
     camera_trap = 'ct'
     earthranger_event = 'er_event'
+    earthranger_patrol = 'er_patrol'
     observation = 'obv'
 
 
@@ -161,15 +162,28 @@ class GeoEvent(CDIPBaseModel):
             val = val.replace(tzinfo=timezone.utc)
         return val
 
+class ERSubject(BaseModel):
+    id: Optional[str]
+    name: str
+    subject_subtype: str
+    additional: dict
+    is_active: bool
+
+class ERLocation(BaseModel):
+    latitude: float
+    longitude: float
+
+class ERUpdate(BaseModel):
+    message: str
+    time: datetime
+    user: dict
+    type: str
+
 
 class EREventState(str, Enum):
     active = 'active'
     closed = 'resolved'
     new = 'new'
-
-class ERLocation(BaseModel):
-    latitude: float
-    longitude: float
 
 class EREvent(CDIPBaseModel):
     er_uuid: uuid.UUID = Field(None, alias='id')
@@ -208,10 +222,23 @@ class EREvent(CDIPBaseModel):
             return f'eventtype:{values["event_type"]}'
         return v
 
+class Geometry(BaseModel):
+    type: str
+    coordinates: List[float]
+
+class GeoJson(BaseModel):
+    type: str
+    geometry: Geometry
+
+class ERPatrolEvent(BaseModel):
+    id: str
+    event_type: str
+    updated_at: datetime
+    geojson: GeoJson
 
 class ERPatrolSegment(BaseModel):
     end_location: Optional[ERLocation]
-    events: Optional[List[dict]] # need to test
+    events: Optional[List[ERPatrolEvent]] # need to test, probably change this to EREvent
     id: str
     leader: Optional[dict]
     patrol_type: str
@@ -219,16 +246,22 @@ class ERPatrolSegment(BaseModel):
     schedule_end: Optional[dict]  # need to test
     start_location: Optional[ERLocation]
     time_range: Optional[dict]
+    updates: Optional[List[ERUpdate]]
+
 
 
 class ERPatrol(CDIPBaseModel):
     files: Optional[List[str]] # Need to test
     id: str
+    serial_number: int
+    title: Optional[str]
     device_id: Optional[str]
     notes: Optional[List[dict]]
     objective: Optional[str] # need to test
     patrol_segments: Optional[List[ERPatrolSegment]] # how to handle multiple ?
     observation_type: str = Field(StreamPrefixEnum.earthranger_patrol.value, const=True)
+    state: str
+    updates: Optional[List[ERUpdate]]
 
 
 class Message(BaseModel):
@@ -291,8 +324,6 @@ class IntegrationInformation(BaseModel):
     provider: Optional[str]
     state: Optional[Dict[str, Any]] = {}
     device_states: Optional[Dict[str, Any]] = {}
-    enabled: bool
-    name: str
 
     @validator('endpoint', pre=True)
     def cleanse_endpoint(cls, endpoint):
@@ -332,6 +363,7 @@ models_by_stream_type = {
     StreamPrefixEnum.position: Position,
     StreamPrefixEnum.geoevent: GeoEvent,
     StreamPrefixEnum.earthranger_event: EREvent,
+    StreamPrefixEnum.earthranger_patrol: ERPatrol,
     StreamPrefixEnum.camera_trap: CameraTrap,
     StreamPrefixEnum.observation: Observation,
     StreamPrefixEnum.message: Message
