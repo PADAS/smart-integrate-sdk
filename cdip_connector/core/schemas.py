@@ -200,6 +200,7 @@ class EREvent(CDIPBaseModel):
     state: EREventState
     url: str
     event_details: Dict[str, Any]
+    patrols: Optional[List[str]]
 
     uri: Optional[str] = Field('', example='https://site.pamdas.org/api/v1.0/activity/events/<id>',
                                             description='The EarthRanger site where this event was created.')
@@ -234,11 +235,12 @@ class ERPatrolEvent(BaseModel):
     id: str
     event_type: str
     updated_at: datetime
-    geojson: GeoJson
+    geojson: Optional[GeoJson]
 
 class ERPatrolSegment(BaseModel):
     end_location: Optional[ERLocation]
     events: Optional[List[ERPatrolEvent]] # need to test, probably change this to EREvent
+    event_details: Optional[List[EREvent]]
     id: str
     leader: Optional[dict]
     patrol_type: str
