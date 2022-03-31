@@ -162,6 +162,7 @@ class GeoEvent(CDIPBaseModel):
             val = val.replace(tzinfo=timezone.utc)
         return val
 
+
 class ERSubject(BaseModel):
     id: Optional[str]
     name: str
@@ -169,9 +170,11 @@ class ERSubject(BaseModel):
     additional: dict
     is_active: bool
 
+
 class ERLocation(BaseModel):
     latitude: float
     longitude: float
+
 
 class ERUpdate(BaseModel):
     message: str
@@ -184,6 +187,7 @@ class EREventState(str, Enum):
     active = 'active'
     closed = 'resolved'
     new = 'new'
+
 
 class EREvent(CDIPBaseModel):
     er_uuid: uuid.UUID = Field(None, alias='id')
@@ -223,19 +227,23 @@ class EREvent(CDIPBaseModel):
             return f'eventtype:{values["event_type"]}'
         return v
 
+
 class Geometry(BaseModel):
     type: str
     coordinates: List[float]
 
+
 class GeoJson(BaseModel):
     type: str
     geometry: Geometry
+
 
 class ERPatrolEvent(BaseModel):
     id: str
     event_type: str
     updated_at: datetime
     geojson: Optional[GeoJson]
+
 
 class ERPatrolSegment(BaseModel):
     end_location: Optional[ERLocation]
@@ -249,7 +257,6 @@ class ERPatrolSegment(BaseModel):
     start_location: Optional[ERLocation]
     time_range: Optional[dict]
     updates: Optional[List[ERUpdate]]
-
 
 
 class ERPatrol(CDIPBaseModel):
