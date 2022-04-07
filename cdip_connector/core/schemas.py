@@ -245,18 +245,28 @@ class ERPatrolEvent(BaseModel):
     geojson: Optional[GeoJson]
 
 
+class ERObservation(BaseModel):
+    id: str
+    location: ERLocation
+    created_at: datetime
+    recorded_at: datetime
+    source: str
+    observation_details: Optional[dict]
+
+
 class ERPatrolSegment(BaseModel):
     end_location: Optional[ERLocation]
-    events: Optional[List[ERPatrolEvent]] # need to test, probably change this to EREvent
-    event_details: Optional[List[EREvent]]
+    events: Optional[List[ERPatrolEvent]]
+    event_details: Optional[List[EREvent]] = []
     id: str
-    leader: Optional[dict]
+    leader: Optional[ERSubject]
     patrol_type: str
-    schedule_start: Optional[dict] # need to test
-    schedule_end: Optional[dict]  # need to test
+    schedule_start: Optional[dict]
+    schedule_end: Optional[dict]
     start_location: Optional[ERLocation]
     time_range: Optional[dict]
     updates: Optional[List[ERUpdate]]
+    track_points: Optional[List[ERObservation]]
 
 
 class ERPatrol(CDIPBaseModel):
