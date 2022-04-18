@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class Publisher(ABC):
 
     @abstractmethod
-    def publish(self, topic: str, data: dict, extra: dict = {}):
+    def publish(self, topic: str, data: dict, extra: dict = None):
         ...
 
 
@@ -41,7 +41,7 @@ class KafkaPublisher(Publisher):
             # logger.warning(f'Unable to determine key, integration_id or device_id not present in observation')
             return None
 
-    def publish(self, topic: str, data: dict, extra: dict = {}):
+    def publish(self, topic: str, data: dict, extra: dict = None):
         key = None
         if cdip_settings.KEY_ORDERING_ENABLED:
             key = self.create_message_key(data)
@@ -62,7 +62,7 @@ class KafkaPublisher(Publisher):
 
 class NullPublisher(Publisher):
 
-    def publish(self, topic: str, data: dict, extra: dict = {}):
+    def publish(self, topic: str, data: dict, extra: dict = None):
         pass
 
 
