@@ -42,6 +42,8 @@ class KafkaPublisher(Publisher):
             return None
 
     def publish(self, topic: str, data: dict, extra: dict = None):
+        if not extra:
+            extra = {}
         key = None
         if cdip_settings.KEY_ORDERING_ENABLED:
             key = self.create_message_key(data)
