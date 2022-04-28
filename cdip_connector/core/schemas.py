@@ -19,6 +19,7 @@ class StreamPrefixEnum(str, Enum):
     message = 'msg'
     camera_trap = 'ct'
     earthranger_event = 'er_event'
+    earthranger_patrol = 'er_patrol'
     observation = 'obv'
 
 
@@ -162,14 +163,31 @@ class GeoEvent(CDIPBaseModel):
         return val
 
 
+class ERSubject(BaseModel):
+    id: Optional[str]
+    name: str
+    subject_subtype: str
+    additional: dict
+    is_active: bool
+
+
+class ERLocation(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class ERUpdate(BaseModel):
+    message: str
+    time: datetime
+    user: dict
+    type: str
+
+
 class EREventState(str, Enum):
     active = 'active'
     closed = 'resolved'
     new = 'new'
 
-class ERLocation(BaseModel):
-    latitude: float
-    longitude: float
 
 class EREvent(CDIPBaseModel):
     er_uuid: uuid.UUID = Field(None, alias='id')
@@ -186,6 +204,7 @@ class EREvent(CDIPBaseModel):
     state: EREventState
     url: str
     event_details: Dict[str, Any]
+    patrols: Optional[List[str]]
 
     uri: Optional[str] = Field('', example='https://site.pamdas.org/api/v1.0/activity/events/<id>',
                                             description='The EarthRanger site where this event was created.')
@@ -207,6 +226,61 @@ class EREvent(CDIPBaseModel):
         if 'event_type' in values:
             return f'eventtype:{values["event_type"]}'
         return v
+
+
+class Geometry(BaseModel):
+    type: str
+    coordinates: List[float]
+
+
+class GeoJson(BaseModel):
+    type: str
+    geometry: Geometry
+
+
+class ERPatrolEvent(BaseModel):
+    id: str
+    event_type: str
+    updated_at: datetime
+    geojson: Optional[GeoJson]
+
+
+class ERObservation(BaseModel):
+    id: str
+    location: ERLocation
+    created_at: datetime
+    recorded_at: datetime
+    source: str
+    observation_details: Optional[dict]
+
+
+class ERPatrolSegment(BaseModel):
+    end_location: Optional[ERLocation]
+    events: Optional[List[ERPatrolEvent]]
+    event_details: Optional[List[EREvent]] = []
+    id: str
+    leader: Optional[ERSubject]
+    patrol_type: str
+    schedule_start: Optional[dict]
+    schedule_end: Optional[dict]
+    start_location: Optional[ERLocation]
+    time_range: Optional[dict]
+    updates: Optional[List[ERUpdate]]
+    track_points: Optional[List[ERObservation]]
+
+
+class ERPatrol(CDIPBaseModel):
+    files: Optional[List[str]] # Need to test
+    id: str
+    serial_number: int
+    title: Optional[str]
+    device_id: Optional[str]
+    notes: Optional[List[dict]]
+    objective: Optional[str] # need to test
+    patrol_segments: Optional[List[ERPatrolSegment]] # how to handle multiple ?
+    observation_type: str = Field(StreamPrefixEnum.earthranger_patrol.value, const=True)
+    state: str
+    updates: Optional[List[ERUpdate]]
 
 
 class Message(BaseModel):
@@ -310,6 +384,7 @@ models_by_stream_type = {
     StreamPrefixEnum.position: Position,
     StreamPrefixEnum.geoevent: GeoEvent,
     StreamPrefixEnum.earthranger_event: EREvent,
+    StreamPrefixEnum.earthranger_patrol: ERPatrol,
     StreamPrefixEnum.camera_trap: CameraTrap,
     StreamPrefixEnum.observation: Observation,
     StreamPrefixEnum.message: Message
