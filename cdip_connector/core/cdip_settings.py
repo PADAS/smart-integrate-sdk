@@ -39,14 +39,13 @@ PUBSUB_ENABLED = env.bool('PUBSUB_ENABLED', False)
 # Google Cloud Settings
 GOOGLE_PUB_SUB_PROJECT_ID = env.str('GOOGLE_PUB_SUB_PROJECT_ID', 'project_id not set')
 GOOGLE_APPLICATION_CREDENTIALS = env.str('GOOGLE_APPLICATION_CREDENTIALS', 'google credentials file not set')
-STREAMING_TOPIC_NAME = env.str('STREAMING_TOPIC_NAME', 'streaming topic name not set')
 CLOUD_STORAGE_TYPE = env.str('CLOUD_STORAGE_TYPE', 'google')
 BUCKET_NAME = env.str('BUCKET_NAME', 'cdip-dev-cameratrap')
 
 # Kafka Settings
 KAFKA_BROKER = env.str('KAFKA_BROKER', 'localhost:9092')
 CONFLUENT_CLOUD_ENABLED = env.bool('CONFLUENT_CLOUD_ENABLED', False)
-KEY_ORDERING_ENABLED = env.bool('KEY_ORDERING_ENABLED', True)
+KEY_ORDERING_ENABLED = env.bool('KEY_ORDERING_ENABLED', False)
 
 CONFLUENT_CLOUD_USERNAME = env.str('CONFLUENT_CLOUD_USERNAME', 'username not set')
 CONFLUENT_CLOUD_PASSWORD = env.str('CONFLUENT_CLOUD_PASSWORD', 'password not set')
