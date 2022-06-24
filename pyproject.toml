@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cdip_connector"
-version = "1.1.4"
+version = "1.1.5"
 description = "SMART Integrate Connector Library"
 authors = [
     "Rohit Chaudhri <rohitc@vulcan.com>",
@@ -22,7 +22,7 @@ pydantic = "^1.7.3"
 pytz = "^2021.1"
 google-cloud-pubsub = "^2.5.0"
 google-cloud-storage = "^1.42.0"
-confluent-kafka="^1.7.0"
+confluent-kafka="^1.9.0"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.6.0"
