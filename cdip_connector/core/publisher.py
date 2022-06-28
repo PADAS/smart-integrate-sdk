@@ -59,7 +59,14 @@ class KafkaPublisher(Publisher):
         except Exception as e:
             # TODO: For message integrity, how should we recover here?
             self.producer.flush()
-            logger.exception(f'Exception thrown while attempting to publish message to kafka stream: {e}')
+            messsage_size_bytes = 0
+            extra_dict = {}
+            if jsonified_data:
+                messsage_size_bytes = len(jsonified_data.encode('utf-8'))
+                extra_dict['message'] = jsonified_data
+                extra_dict['message_size_bytes'] = messsage_size_bytes
+            logger.exception(f'Exception thrown while attempting to publish message to kafka stream: {e}',
+                             extra=extra_dict)
 
 
 class NullPublisher(Publisher):
