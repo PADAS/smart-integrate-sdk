@@ -1,9 +1,8 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 from uuid import UUID
 
-import pytz
 import requests
 from aiohttp import ClientSession, ClientResponseError
 from pydantic import parse_obj_as
@@ -29,12 +28,12 @@ class PortalApi:
         self.portal_api_endpoint = cdip_settings.PORTAL_API_ENDPOINT
 
         self.cached_token = None
-        self.cached_token_expires_at = datetime.min.replace(tzinfo=pytz.utc)
+        self.cached_token_expires_at = datetime.min.replace(tzinfo=timezone.utc)
 
     async def get_access_token(self,
                                session: ClientSession) -> OAuthToken:
 
-        if self.cached_token and self.cached_token_expires_at > datetime.now(tz=pytz.utc):
+        if self.cached_token and self.cached_token_expires_at > datetime.now(tz=timezone.utc):
             logger.info('Using cached token.')
             return self.cached_token
 
@@ -53,7 +52,7 @@ class PortalApi:
         response.raise_for_status()
         token = await response.json()
         token = OAuthToken.parse_obj(token)
-        self.cached_token_expires_at = datetime.now(tz=pytz.utc) + timedelta(
+        self.cached_token_expires_at = datetime.now(tz=timezone.utc) + timedelta(
             seconds=token.expires_in - 15)  # fudge factor
         self.cached_token = token
         return token
