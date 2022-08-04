@@ -205,6 +205,7 @@ class EREvent(CDIPBaseModel):
     url: str
     event_details: Dict[str, Any]
     patrols: Optional[List[str]]
+    files: Optional[List[dict]]
 
     uri: Optional[str] = Field('', example='https://site.pamdas.org/api/v1.0/activity/events/<id>',
                                             description='The EarthRanger site where this event was created.')
