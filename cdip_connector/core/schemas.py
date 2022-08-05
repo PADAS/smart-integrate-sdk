@@ -271,7 +271,7 @@ class ERPatrolSegment(BaseModel):
 
 
 class ERPatrol(CDIPBaseModel):
-    files: Optional[List[str]] # Need to test
+    files: Optional[List[dict]]
     id: str
     serial_number: int
     title: Optional[str]
