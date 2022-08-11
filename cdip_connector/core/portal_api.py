@@ -127,13 +127,6 @@ class PortalApi:
             return states_asdict
             # return {s.device_external_id: s.state for s in states_received}
 
-    async def update_device_states(self,
-                                   session: ClientSession,
-                                   inbound_id: UUID,
-                                   device_state: List[DeviceState]):
-        states_dict = {s.device_external_id: s.state for s in device_state}
-        return await self.update_states_with_dict(session, inbound_id, states_dict)
-
     async def ensure_device(self,
                             session: ClientSession,
                             inbound_id: UUID,

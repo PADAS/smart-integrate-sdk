@@ -8,13 +8,11 @@ from aiohttp import ClientSession, ClientTimeout
 
 from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
-from .schemas import MetricsEnum, IntegrationInformation, CDIPBaseModel
-from .metrics import CdipMetrics
+from .schemas import IntegrationInformation, CDIPBaseModel
 from .portal_api import PortalApi
 
 logconfig.init()
-logger = logging.getLogger(__name__)
-logger.setLevel(cdip_settings.LOG_LEVEL)
+
 
 CLIENT_TIMEOUT_TOTAL = 180  # seconds
 
@@ -23,30 +21,35 @@ class AbstractConnector(ABC):
     DEFAULT_REQUESTS_TIMEOUT = (3.1, 20)
 
     def __init__(self):
-        super().__init__()
+        # super().__init__()
+
+        logger = logging.getLogger(self.__class__.__name__)
+        logger.setLevel(cdip_settings.LOG_LEVEL)
+
         self.portal = PortalApi()
-        self.metrics = CdipMetrics()
+
         self.load_batch_size = 100  # a default meant to be overridden as needed
+        self.concurrency = 5
+
 
     def execute(self) -> None:
-        self.metrics.incr_count(MetricsEnum.INVOKED)
         asyncio.run(self.main())
 
     async def main(self) -> None:
         try:
             # Fudge with a really long timeout value.
             async with ClientSession(timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL)) as session:
-                logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
-                integration_info = await self.portal.get_authorized_integrations(session)
+                self.logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
+                integrations = await self.portal.get_authorized_integrations(session)
 
-                result = [await self.extract_load(session, i) for i in integration_info]
-                # tasks = [asyncio.ensure_future(self.extract_load(session, i)) for i in integration_info]
-                # result = await asyncio.gather(*tasks)
-                logger.info(result)
+                # result = [await self.extract_load(session, i) for i in integration_info]
+                for idx in range(0, len(integrations), self.concurrency):
+                    tasks = [asyncio.ensure_future(self.extract_load(session, integration)) for integration in integrations[idx:idx+self.concurrency]]
+                    result = await asyncio.gather(*tasks)
+                    self.logger.info(result)
 
         except Exception as ex:
-            self.metrics.incr_count(MetricsEnum.ERRORS)
-            logger.exception('Uncaught exception in main.')
+            self.logger.exception('Uncaught exception in main.')
             raise
 
     async def extract_load(self,
@@ -59,17 +62,16 @@ class AbstractConnector(ABC):
         async for extracted in self.extract(session, integration):
 
             if extracted is not None:
-                logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
+                self.logger.info(f'{integration.login}:{integration.id} {len(extracted)} recs to send')
                 if extracted:
-                    logger.info(f'first transformed payload: {extracted[0]}')
+                    self.logger.info(f'first transformed payload: {extracted[0]}')
 
                 await self.load(session, extracted)
                 await self.update_state(session, integration)
 
-                self.metrics.incr_count(MetricsEnum.TO_CDIP, len(extracted))
                 total += len(extracted)
         if not total:
-            logger.info(f'{integration.login}:{integration.id} Nothing to send to SIntegrate')
+            self.logger.info(f'{integration.login}:{integration.id} Nothing to send to SIntegrate')
         return total
 
     @abstractmethod
@@ -99,14 +101,14 @@ class AbstractConnector(ABC):
         for i, batch in enumerate(generate_batches(transformed_data)):
 
 
-            logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
+            self.logger.info(f'Posting to: {cdip_settings.CDIP_API_ENDPOINT}')
 
-            logger.debug(f'r1 is: {batch[0]}')
+            self.logger.debug(f'r1 is: {batch[0]}')
             clean_batch = [json.loads(r.json()) for r in batch]
 
             for j in range(2):
 
-                logger.debug('sending batch.', extra={'batch_no': i, 'length': len(batch), 
+                self.logger.debug('sending batch.', extra={'batch_no': i, 'length': len(batch), 
                     'attempt': j, 'api': cdip_settings.CDIP_API_ENDPOINT})
 
                 client_response = await session.post(url=cdip_settings.CDIP_API_ENDPOINT,
