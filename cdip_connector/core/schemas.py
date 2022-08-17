@@ -1,4 +1,3 @@
-import abc
 import logging
 from enum import Enum
 from typing import List, Optional, Dict, Any, Iterable
@@ -53,13 +52,6 @@ class DeviceState(BaseModel):
     state: Optional[Union[str, Dict[str, Any]]] = None
 
 
-class MetricsEnum(Enum):
-    INVOKED = 'invoked'
-    ERRORS = 'errors'
-    FROM_PROVIDER = 'from_provider'
-    TO_CDIP = 'to_cdip'
-
-
 class RadioStatusEnum(str, Enum):
     """
     Radio Status values.
@@ -79,7 +71,7 @@ class Location(BaseModel):
     vdop: Optional[int] = None
 
 
-class CDIPBaseModel(BaseModel, abc.ABC):
+class CDIPBaseModel(BaseModel):
     id: Optional[Union[int, uuid.UUID]] = None
 
     owner: str = 'na'
