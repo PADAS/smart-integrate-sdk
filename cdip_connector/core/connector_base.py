@@ -23,8 +23,8 @@ class AbstractConnector(ABC):
     def __init__(self):
         # super().__init__()
 
-        logger = logging.getLogger(self.__class__.__name__)
-        logger.setLevel(cdip_settings.LOG_LEVEL)
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(cdip_settings.LOG_LEVEL)
 
         self.portal = PortalApi()
 
