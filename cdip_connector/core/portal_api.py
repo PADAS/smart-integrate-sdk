@@ -34,7 +34,6 @@ class PortalApi:
                                session: ClientSession) -> OAuthToken:
 
         if self.cached_token and self.cached_token_expires_at > datetime.now(tz=timezone.utc):
-            logger.info('Using cached token.')
             return self.cached_token
 
         logger.debug(f'get_access_token from {self.oauth_token_url} using client_id: {self.client_id}')
@@ -145,7 +144,7 @@ class PortalApi:
         if response.ok:
             return resp
         else:
-            logger.error('Failed to post device to portal.', extra={**payload, **resp})
+            logger.error('Failed to post device to portal.', extra={**payload, 'response': str(response)})
 
         return None
 
