@@ -142,6 +142,8 @@ class GeoEvent(CDIPBaseModel):
 
     event_details: Dict[str, Any] = Field(None, title="GeoEvent Details",
                                           description="A dictionary containing details of this GeoEvent.")
+    geometry: Optional[Dict[str, Any]] = Field(None, title="GeoEvent Geometry",
+                                          description="A dictionary containing details of this GeoEvent geoJSON.")
     observation_type: str = Field(StreamPrefixEnum.geoevent.value, const=True)
 
     class Config:
