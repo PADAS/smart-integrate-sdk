@@ -10,11 +10,14 @@ from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
 from .schemas import IntegrationInformation, CDIPBaseModel
 from .portal_api import PortalApi
+from .tracing import tracer
+
 
 logconfig.init()
 
 
 CLIENT_TIMEOUT_TOTAL = 180  # seconds
+
 
 class AbstractConnector(ABC):
     DEFAULT_LOOKBACK_DAYS = cdip_settings.DEFAULT_LOOKBACK_DAYS
@@ -31,9 +34,11 @@ class AbstractConnector(ABC):
         self.load_batch_size = 100  # a default meant to be overridden as needed
         self.concurrency = 5
 
-
     def execute(self) -> None:
-        asyncio.run(self.main())
+        connector_name = self.__class__.__name__
+        with tracer.start_as_current_span(f"integrations.{connector_name}.execute") as current_span:
+            current_span.set_attribute("service", f"cdip-integrations.{connector_name}")
+            asyncio.run(self.main())
 
     async def main(self) -> None:
         try:
