@@ -1,8 +1,8 @@
 # Distributed Tracing using Open Telemetry
-# ToDo: Move OTel instrumentation code into the connector?
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.propagators.cloud_trace_propagator import (
@@ -29,6 +29,10 @@ def configure_tracer(name: str, version: str = ""):
         # background thread. The default parameters are sensible, but can be
         # tweaked to optimize your performance
         BatchSpanProcessor(cloud_trace_exporter)
+    )
+    jaeger_exporter = OTLPSpanExporter()
+    tracer_provider.add_span_processor(
+        BatchSpanProcessor(jaeger_exporter)
     )
     trace.set_tracer_provider(tracer_provider)
     # Using the X-Cloud-Trace-Context header
