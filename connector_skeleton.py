@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 class MyConnector(AbstractConnector):
-    async def extract(self,
-                      session: ClientSession,
-                      integration_info: IntegrationInformation) -> List[Position]:
+    async def extract(
+        self, session: ClientSession, integration_info: IntegrationInformation
+    ) -> List[Position]:
         # ETL extract code goes here. This is specific to each integration
 
         # update the state data structure in IntegrationInformation before yield
@@ -24,8 +24,8 @@ class MyConnector(AbstractConnector):
         yield []
 
 
-if __name__ == '__main__':
-    logger.info('executing connector')
+if __name__ == "__main__":
+    logger.info("executing connector")
     connector = MyConnector()
     connector.execute()
-    logger.info('all done. returning from external_trigger')
+    logger.info("all done. returning from external_trigger")

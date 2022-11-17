@@ -9,9 +9,7 @@ from opentelemetry.propagators.cloud_trace_propagator import (
 )
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.instrumentation.aiohttp_client import (
-    AioHttpClientInstrumentor
-)
+from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 
 
 def configure_tracer(name: str, version: str = ""):
