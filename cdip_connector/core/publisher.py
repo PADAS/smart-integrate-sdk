@@ -1,10 +1,9 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-
 from confluent_kafka import Producer
-
 from cdip_connector.core import cdip_settings
+from app.utils import tracing
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ class KafkaPublisher(Publisher):
             config_dict['sasl.username'] = cdip_settings.CONFLUENT_CLOUD_USERNAME
             config_dict['sasl.password'] = cdip_settings.CONFLUENT_CLOUD_PASSWORD
 
-        self.producer = Producer(config_dict)
+        self.producer = tracing.instrument_kafka_producer(Producer(config_dict))
 
     @staticmethod
     def create_message_key(data):
