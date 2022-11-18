@@ -3,7 +3,7 @@ import logging
 from abc import ABC, abstractmethod
 from confluent_kafka import Producer
 from cdip_connector.core import cdip_settings
-from app.utils import tracing
+from . import tracing
 
 logger = logging.getLogger(__name__)
 
