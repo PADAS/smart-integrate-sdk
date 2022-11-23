@@ -15,13 +15,13 @@ from cdip_connector.core import cdip_settings
 
 logger = logging.getLogger(__name__)
 
+
 class CloudStorageTypeEnum(str, Enum):
-    google = 'google'
-    local = 'local'
+    google = "google"
+    local = "local"
 
 
 class CloudStorage(ABC):
-
     @abstractmethod
     def download(self):
         ...
@@ -41,13 +41,17 @@ class CloudStorage(ABC):
 
 class GoogleCouldStorage(CloudStorage):
     def __init__(self):
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = cdip_settings.GOOGLE_APPLICATION_CREDENTIALS
+        os.environ[
+            "GOOGLE_APPLICATION_CREDENTIALS"
+        ] = cdip_settings.GOOGLE_APPLICATION_CREDENTIALS
         try:
             self.client = storage.Client()
             self.bucket = self.client.get_bucket(cdip_settings.BUCKET_NAME)
         except Exception as e:
-            logger.exception(f'Exception while initializing Google CLoud Storage: {e} \n'
-                             f'Ensure GOOGLE_APPLICATION_CREDENTIALS are specified in this environment')
+            logger.exception(
+                f"Exception while initializing Google CLoud Storage: {e} \n"
+                f"Ensure GOOGLE_APPLICATION_CREDENTIALS are specified in this environment"
+            )
 
     def download(self, file_name):
         file = None
@@ -58,7 +62,7 @@ class GoogleCouldStorage(CloudStorage):
             file.seek(0)
             file.name = file_name
         else:
-            logger.warning(f'{file_name} not found in cloud storage')
+            logger.warning(f"{file_name} not found in cloud storage")
         return file
 
     def upload(self, file: bytes, file_name: str) -> str:
@@ -69,7 +73,7 @@ class GoogleCouldStorage(CloudStorage):
             file_extension = pathlib.Path(file_name).suffix
             blob.upload_from_string(data=file, content_type=file_extension)
         else:
-            logger.info(f'{file_name} found in cloud storage, skipping upload')
+            logger.info(f"{file_name} found in cloud storage, skipping upload")
         return file_name
 
     def check_exists(self, file_name: str) -> bool:
@@ -81,7 +85,7 @@ class GoogleCouldStorage(CloudStorage):
         try:
             file.close()
         except Exception as e:
-            logger.warning(f'failed to close file with exception: {e}')
+            logger.warning(f"failed to close file with exception: {e}")
 
 
 class LocalStorage(CloudStorage):
@@ -92,9 +96,11 @@ class LocalStorage(CloudStorage):
     def upload(self, file: bytes, file_name: str) -> str:
         # deleting to occur in cdip-routing when image is dispatched
         file_extension = pathlib.Path(file_name).suffix
-        temp_file = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix=file_extension)
+        temp_file = tempfile.NamedTemporaryFile(
+            mode="wb", delete=False, suffix=file_extension
+        )
         image_uri = temp_file.name
-        logger.debug(f'Temp image name: {image_uri}')
+        logger.debug(f"Temp image name: {image_uri}")
 
         with Image.open(io.BytesIO(file)) as img:
             img.save(image_uri)
@@ -112,7 +118,7 @@ class LocalStorage(CloudStorage):
             file.close()
             os.remove(file.name)
         except Exception as e:
-            logger.warning(f'failed to remove {file} with exception: {e}')
+            logger.warning(f"failed to remove {file} with exception: {e}")
 
 
 def get_cloud_storage():
@@ -120,5 +126,3 @@ def get_cloud_storage():
         return GoogleCouldStorage()
     else:
         return LocalStorage()
-
-
