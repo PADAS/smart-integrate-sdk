@@ -314,7 +314,7 @@ class ERPatrolSegment(BaseModel):
     start_location: Optional[ERLocation]
     time_range: Optional[dict]
     updates: Optional[List[ERUpdate]]
-    track_points: Optional[List[ERObservation]]
+    track_points: Optional[List[ERObservation]] = []
 
 
 class ERPatrol(CDIPBaseModel):
