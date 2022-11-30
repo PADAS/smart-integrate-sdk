@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, aiohttp
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -16,18 +16,13 @@ from .tracing import tracer
 logconfig.init()
 
 
-CLIENT_TIMEOUT_TOTAL = 180  # seconds
-
-
 class AbstractConnector(ABC):
     DEFAULT_LOOKBACK_DAYS = cdip_settings.DEFAULT_LOOKBACK_DAYS
     DEFAULT_REQUESTS_TIMEOUT = (3.1, 20)
 
     def __init__(self):
-        # super().__init__()
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(cdip_settings.LOG_LEVEL)
 
         self.portal = PortalApi()
 
@@ -44,19 +39,21 @@ class AbstractConnector(ABC):
 
     async def main(self) -> None:
         try:
-            # Fudge with a really long timeout value.
-            async with ClientSession(
-                timeout=ClientTimeout(total=CLIENT_TIMEOUT_TOTAL)
-            ) as session:
-                self.logger.info(f"CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}")
-                integrations = await self.portal.get_authorized_integrations(session)
 
-                # result = [await self.extract_load(session, i) for i in integration_info]
-                for idx in range(0, len(integrations), self.concurrency):
+            async with ClientSession() as s:
+                integrations = await self.portal.get_authorized_integrations(s)
+
+            for idx in range(0, len(integrations), self.concurrency):
+
+                async with ClientSession() as session:
+
+                    self.logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
+
                     tasks = [
                         asyncio.ensure_future(self.extract_load(session, integration))
                         for integration in integrations[idx : idx + self.concurrency]
                     ]
+
                     result = await asyncio.gather(*tasks)
                     self.logger.info(result)
 
@@ -104,13 +101,15 @@ class AbstractConnector(ABC):
     async def update_state(
         self, session: ClientSession, integration_info: IntegrationInformation
     ) -> None:
-        await self.portal.update_state(session, integration_info)
+        async with aiohttp.ClientSession() as sess:
+            await self.portal.update_state(sess, integration_info)
 
     async def load(
         self, session: ClientSession, transformed_data: List[CDIPBaseModel]
     ) -> None:
 
-        headers = await self.portal.get_auth_header(session)
+        async with aiohttp.ClientSession() as sess:
+            headers = await self.portal.get_auth_header(session)
 
         def generate_batches(iterable, n=self.load_batch_size):
             for i in range(0, len(iterable), n):
@@ -135,12 +134,11 @@ class AbstractConnector(ABC):
                     },
                 )
 
-                client_response = await session.post(
-                    url=cdip_settings.CDIP_API_ENDPOINT,
-                    headers=headers,
-                    json=clean_batch,
-                    ssl=cdip_settings.CDIP_API_SSL_VERIFY,
-                )
+                async with aiohttp.ClientSession() as sess:
+                    client_response = await sess.post(url=cdip_settings.CDIP_API_ENDPOINT,
+                             headers=headers,
+                             json=clean_batch,
+                             ssl=cdip_settings.CDIP_API_SSL_VERIFY)
 
                 # Catch to attemp to re-authorized
                 if client_response.status == 401:
