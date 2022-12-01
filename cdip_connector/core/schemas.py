@@ -305,7 +305,7 @@ class ERObservation(BaseModel):
 class ERPatrolSegment(BaseModel):
     end_location: Optional[ERLocation]
     events: Optional[List[ERPatrolEvent]]
-    event_details: Optional[List[EREvent]] = []
+    event_details: Optional[List[EREvent]] = Field(default_factory=list)
     id: str
     leader: Optional[ERSubject]
     patrol_type: str
@@ -314,7 +314,7 @@ class ERPatrolSegment(BaseModel):
     start_location: Optional[ERLocation]
     time_range: Optional[dict]
     updates: Optional[List[ERUpdate]]
-    track_points: Optional[List[ERObservation]] = []
+    track_points: Optional[List[ERObservation]] = Field(default_factory=list)
 
 
 class ERPatrol(CDIPBaseModel):
