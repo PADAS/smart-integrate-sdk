@@ -47,7 +47,7 @@ class AbstractConnector(ABC):
 
                 async with ClientSession() as session:
 
-                    self.logger.info(f'CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}')
+                    self.logger.info(f"CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}")
 
                     tasks = [
                         asyncio.ensure_future(self.extract_load(session, integration))
@@ -72,20 +72,42 @@ class AbstractConnector(ABC):
 
             if extracted is not None:
                 self.logger.info(
-                    f"{integration.login}:{integration.id} {len(extracted)} recs to send"
+                    f"{integration.login}:{integration.id} extracted {len(extracted)} items",
+                    extra={
+                        "integration_id": integration.id,
+                        "extracted_count": len(extracted),
+                        "integration_type": integration.type_slug,
+                        "integration_name": integration.name,
+                        "integration_login": integration.login,
+
+                    }
                 )
-                if extracted:
-                    self.logger.info(f"first transformed payload: {extracted[0]}")
 
                 await self.load(session, extracted)
                 await self.update_state(session, integration)
 
                 total += len(extracted)
+
         if not total:
             self.logger.info(
-                f"{integration.login}:{integration.id} Nothing to send to SIntegrate"
+                f"{integration.login}:{integration.id} no new data.",
+                extra={
+                    "integration_id": integration.id,
+                    "extracted_count": total,
+                    "integration_type": integration.type_slug,
+                    "integration_name": integration.name,
+                    "integration_login": integration.login,
+                }
             )
-        return total
+
+        # Summary report for a single Integration.
+        return {
+            "integration_id": integration.id,
+            "extracted_count": total,
+            "integration_type": integration.type_slug,
+            "integration_name": integration.name,
+            "integration_login": integration.login,
+        }
 
     @abstractmethod
     async def extract(
@@ -135,12 +157,14 @@ class AbstractConnector(ABC):
                 )
 
                 async with aiohttp.ClientSession() as sess:
-                    client_response = await sess.post(url=cdip_settings.CDIP_API_ENDPOINT,
-                             headers=headers,
-                             json=clean_batch,
-                             ssl=cdip_settings.CDIP_API_SSL_VERIFY)
+                    client_response = await sess.post(
+                        url=cdip_settings.CDIP_API_ENDPOINT,
+                        headers=headers,
+                        json=clean_batch,
+                        ssl=cdip_settings.CDIP_API_SSL_VERIFY,
+                    )
 
-                # Catch to attemp to re-authorized
+                # Catch to attempt to re-authorized
                 if client_response.status == 401:
                     headers = await self.portal.get_auth_header(session)
                 else:
