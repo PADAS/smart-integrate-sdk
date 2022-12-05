@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "cdip_connector"
-version = "1.2.8"
+version = "1.2.9"
 description = "SMART Integrate Connector Library"
 authors = [
     "Rohit Chaudhri <rohitc@vulcan.com>",
     "Matt Morrissette <matt.morrissette@wildlifeprotectionsolutions.org>",
-    "Chris Doehring <chrisdo@vulcan.com>"
+    "Chris Doehring <chrisdo@earthranger.com>"
 ]
 
 license = "Apache-2.0"

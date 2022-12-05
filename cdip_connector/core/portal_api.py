@@ -105,20 +105,21 @@ class PortalApi:
     async def update_state(
         self, session: ClientSession, integration_info: IntegrationInformation
     ) -> None:
-        headers = await self.get_auth_header(session)
+        async with ClientSession() as sess:
+            headers = await self.get_auth_header(sess)
 
-        response = await session.put(
-            url=f"{self.integrations_endpoint}/{integration_info.id}",
-            headers=headers,
-            json=dict(state=integration_info.state),
-            ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY,
-        )
-        logger.info(f"update integration state resp: {response.status}")
-        response.raise_for_status()
+            response = await sess.put(
+                url=f"{self.integrations_endpoint}/{integration_info.id}",
+                headers=headers,
+                json=dict(state=integration_info.state),
+                ssl=cdip_settings.CDIP_ADMIN_SSL_VERIFY,
+            )
+            logger.info(f"update integration state resp: {response.status}")
+            response.raise_for_status()
 
-        return await self.update_states_with_dict(
-            session, integration_info.id, integration_info.device_states
-        )
+            return await self.update_states_with_dict(
+                sess, integration_info.id, integration_info.device_states
+            )
 
     async def fetch_device_states(self, session: ClientSession, inbound_id: UUID):
         try:
