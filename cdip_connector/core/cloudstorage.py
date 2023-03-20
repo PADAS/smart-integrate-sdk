@@ -46,12 +46,14 @@ class GoogleCouldStorage(CloudStorage):
         ] = cdip_settings.GOOGLE_APPLICATION_CREDENTIALS
         try:
             self.client = storage.Client()
-            self.bucket = self.client.get_bucket(cdip_settings.BUCKET_NAME)
         except Exception as e:
-            logger.exception(
+            logger.warning(
                 f"Exception while initializing Google CLoud Storage: {e} \n"
-                f"Ensure GOOGLE_APPLICATION_CREDENTIALS are specified in this environment"
+                f"Check if GOOGLE_APPLICATION_CREDENTIALS are required in this environment"
             )
+        else:
+            self.bucket = self.client.get_bucket(cdip_settings.BUCKET_NAME)
+
 
     def download(self, file_name):
         file = None
