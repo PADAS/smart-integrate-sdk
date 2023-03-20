@@ -13,6 +13,7 @@ from .schemas import (
     OAuthToken,
     TIntegrationInformation,
     DeviceState,
+    OutboundConfiguration
 )
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,25 @@ class PortalApi:
         return {
             "authorization": f"{token_object.token_type} {token_object.access_token}"
         }
+
+
+    async def get_destinations(self, *args, integration_id: str = None, device_id: str = None):
+
+        async with ClientSession() as session:
+
+            headers = await self.get_auth_header(session)
+    
+            url = f'{self.portal_api_endpoint}/integrations/outbound/configurations'
+            response = await session.get(url, params={'inbound_id': integration_id, 'device_id': device_id}, headers=headers)
+
+            if response.ok:
+
+                data = await response.json()
+
+                return [OutboundConfiguration.parse_obj(item) for item in data]
+
+            return []
+
 
     async def get_authorized_integrations(
         self,
@@ -200,3 +220,4 @@ class PortalApi:
         )
         response.raise_for_status()
         return await response.json()
+
