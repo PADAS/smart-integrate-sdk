@@ -34,9 +34,10 @@ PORTAL_API_ENDPOINT = f"{CDIP_ADMIN_ENDPOINT}/api/v1.0"
 PUBSUB_ENABLED = env.bool("PUBSUB_ENABLED", False)
 
 # Google Cloud Settings
+GCP_PROJECT_ID = env.str("GCP_PROJECT_ID", None)
 GOOGLE_PUB_SUB_PROJECT_ID = env.str("GOOGLE_PUB_SUB_PROJECT_ID", "project_id not set")
 GOOGLE_APPLICATION_CREDENTIALS = env.str(
-    "GOOGLE_APPLICATION_CREDENTIALS", "google credentials file not set"
+    "GOOGLE_APPLICATION_CREDENTIALS", None
 )
 CLOUD_STORAGE_TYPE = env.str("CLOUD_STORAGE_TYPE", "google")
 BUCKET_NAME = env.str("BUCKET_NAME", "cdip-dev-cameratrap")
