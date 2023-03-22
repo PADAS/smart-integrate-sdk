@@ -26,8 +26,8 @@ class AbstractConnector(ABC):
 
         self.portal = PortalApi()
 
-        self.load_batch_size = 100  # a default meant to be overridden as needed
-        self.concurrency = 5
+        self.load_batch_size = cdip_settings.INTEGRATION_LOAD_BATCH_SIZE
+        self.concurrency = cdip_settings.INTEGRATION_CONCURRENCY
 
     def execute(self) -> None:
         connector_name = self.__class__.__name__
@@ -46,11 +46,11 @@ class AbstractConnector(ABC):
             for idx in range(0, len(integrations), self.concurrency):
 
                 async with ClientSession() as session:
-
-                    self.logger.info(f"CLIENT_ID: {cdip_settings.KEYCLOAK_CLIENT_ID}")
+                    
+                    self.logger.info(f"Running Integrations for client_id: {cdip_settings.KEYCLOAK_CLIENT_ID}")
 
                     tasks = [
-                        asyncio.ensure_future(self.extract_load(session, integration))
+                        asyncio.ensure_future(self.__class__().extract_load(session, integration))
                         for integration in integrations[idx : idx + self.concurrency]
                     ]
 
@@ -64,6 +64,13 @@ class AbstractConnector(ABC):
     async def extract_load(
         self, session: ClientSession, integration: IntegrationInformation
     ) -> int:
+
+
+        self.logger.info(f'Executing Function for Integration: {integration.name} ({integration.id})', extra={
+            'integration_id': str(integration.id),
+            'integration_name': integration.name,
+            'integration_endpoint': integration.endpoint
+        })
 
         total = 0
         device_states = await self.portal.fetch_device_states(session, integration.id)
