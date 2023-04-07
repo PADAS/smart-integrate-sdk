@@ -49,3 +49,9 @@ KEY_ORDERING_ENABLED = env.bool("KEY_ORDERING_ENABLED", False)
 
 CONFLUENT_CLOUD_USERNAME = env.str("CONFLUENT_CLOUD_USERNAME", "username not set")
 CONFLUENT_CLOUD_PASSWORD = env.str("CONFLUENT_CLOUD_PASSWORD", "password not set")
+
+# How many integrations should run at once.
+INTEGRATION_CONCURRENCY = env.int("INTEGRATION_CONCURRENCY", 5)
+
+# How many items should be posted to Sensors API in each request.
+INTEGRATION_LOAD_BATCH_SIZE = env.int("INTEGRATION_LOAD_BATCH_SIZE", 100)
