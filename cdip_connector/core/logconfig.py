@@ -28,6 +28,15 @@ LOGGING_CONFIG = {
         "PIL.Image": {
             "level": "INFO",
         },
+        'httpx': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'httpcore': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+
     },
 }
 
