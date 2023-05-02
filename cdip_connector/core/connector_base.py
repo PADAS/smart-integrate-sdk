@@ -46,12 +46,12 @@ class AbstractConnector(ABC):
             for idx in range(0, len(integrations), self.concurrency):
 
                 async with ClientSession() as session:
-                    
+
                     self.logger.info(f"Running Integrations for client_id: {cdip_settings.KEYCLOAK_CLIENT_ID}")
 
                     tasks = [
                         asyncio.ensure_future(self.__class__().extract_load(session, integration))
-                        for integration in integrations[idx : idx + self.concurrency]
+                        for integration in integrations[idx: idx + self.concurrency]
                     ]
 
                     result = await asyncio.gather(*tasks)
@@ -73,8 +73,8 @@ class AbstractConnector(ABC):
         })
 
         total = 0
-        device_states = await self.portal.fetch_device_states(session, integration.id)
-        integration.device_states = device_states
+        integration.device_states = await self.portal.fetch_device_states(session, integration.id)
+
         async for extracted in self.extract(session, integration):
 
             if extracted is not None:
@@ -90,10 +90,10 @@ class AbstractConnector(ABC):
                     }
                 )
 
-                await self.load(session, extracted)
-                await self.update_state(session, integration)
-
+                await self.load(extracted)
                 total += len(extracted)
+
+        await self.update_state(integration)
 
         if not total:
             self.logger.info(
@@ -118,7 +118,7 @@ class AbstractConnector(ABC):
 
     @abstractmethod
     async def extract(
-        self, session: ClientSession, integration_info: IntegrationInformation
+            self, session: ClientSession, integration_info: IntegrationInformation
     ) -> AsyncGenerator[List[CDIPBaseModel], None]:
         s = (
             yield 0
@@ -127,22 +127,18 @@ class AbstractConnector(ABC):
     def item_callback(self, item):
         pass
 
-    async def update_state(
-        self, session: ClientSession, integration_info: IntegrationInformation
-    ) -> None:
+    async def update_state(self, integration_info: IntegrationInformation) -> None:
         async with aiohttp.ClientSession() as sess:
             await self.portal.update_state(sess, integration_info)
 
-    async def load(
-        self, session: ClientSession, transformed_data: List[CDIPBaseModel]
-    ) -> None:
+    async def load(self, transformed_data: List[CDIPBaseModel]) -> None:
 
         async with aiohttp.ClientSession() as sess:
-            headers = await self.portal.get_auth_header(session)
+            headers = await self.portal.get_auth_header(sess)
 
         def generate_batches(iterable, n=self.load_batch_size):
             for i in range(0, len(iterable), n):
-                yield iterable[i : i + n]
+                yield iterable[i: i + n]
 
         for i, batch in enumerate(generate_batches(transformed_data)):
 
@@ -173,7 +169,7 @@ class AbstractConnector(ABC):
 
                 # Catch to attempt to re-authorized
                 if client_response.status == 401:
-                    headers = await self.portal.get_auth_header(session)
+                    headers = await self.portal.get_auth_header(sess)
                 else:
                     [self.item_callback(item) for item in batch]
                     client_response.raise_for_status()
