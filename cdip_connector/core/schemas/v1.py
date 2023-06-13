@@ -6,8 +6,9 @@ from typing import Union
 from uuid import UUID
 from datetime import datetime, timezone
 import uuid
-
 from pydantic import BaseModel, Field, HttpUrl, ValidationError, validator
+from .common import *
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +21,6 @@ class StreamPrefixEnum(str, Enum):
     earthranger_event = "er_event"
     earthranger_patrol = "er_patrol"
     observation = "obv"
-    attachment = "att"
-
-
-class DestinationTypes(Enum):
-    EarthRanger = "earth_ranger"
-    SmartConnect = "smart_connect"
-    WPSWatch = "wps_watch"
 
 
 class EventTypes(str, Enum):
@@ -498,13 +492,3 @@ def get_validated_objects(
             logger.warning(f"Error {ve} for {obj}")
             errors.append(str(ve))
     return validated, errors
-
-
-class Attachment(CDIPBaseModel):
-    related_to: Optional[Union[UUID, str]] = Field(
-        None,
-        title="Related Object - Gundi ID",
-        description="The Gundi ID of the related object this file is being attached to",
-    )
-    file_path: str
-    observation_type: str = Field(StreamPrefixEnum.attachment.value, const=True)
