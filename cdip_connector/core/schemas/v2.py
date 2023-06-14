@@ -20,8 +20,22 @@ class Location(BaseModel):
     vdop: Optional[int] = None
 
 
-class Event(CDIPBaseModel):
+class GundiBaseModel(BaseModel):
+    gundi_id: Union[int, UUID]
+    owner: str = "na"
+    data_provider_id: Optional[Union[UUID, str]] = Field(
+        None,
+        title="Provider ID",
+        description="The unique ID of the Integration providing the data.",
+    )
+    annotations: Optional[Dict[str, Any]] = Field(
+        None,
+        title="Annotations",
+        description="A dictionary of extra data that will be passed to destination systems.",
+    )
 
+
+class Event(GundiBaseModel):
     source_id: str = Field(
         "none",
         example="901870234",
@@ -33,19 +47,14 @@ class Event(CDIPBaseModel):
         example="2021-03-21 12:01:02-0700",
     )
     location: Location
-    additional: Optional[Dict[str, Any]] = Field(
-        None,
-        title="Additional Data",
-        description="A dictionary of extra data that will be passed to destination systems.",
-    )
-
     title: str = Field(
         None,
         title="Event title",
-        description="Human-friendly title for this GeoEvent",
+        description="Human-friendly title for this Event",
     )
     event_type: str = Field(
-        None, title="Event Type", description="Identifies the type of this GeoEvent"
+        None, title="Event Type",
+        description="Identifies the type of this Event"
     )
 
     event_details: Dict[str, Any] = Field(
@@ -59,9 +68,6 @@ class Event(CDIPBaseModel):
         description="A dictionary containing details of this GeoEvent geoJSON.",
     )
     observation_type: str = Field(StreamPrefixEnum.event.value, const=True)
-
-    class Config:
-        title = "GeoEvent"
 
     @validator("recorded_at", allow_reuse=True)
     def clean_recorded_at(cls, val):
@@ -84,6 +90,11 @@ class Attachment(CDIPBaseModel):
     )
     file_path: str
     observation_type: str = Field(StreamPrefixEnum.attachment.value, const=True)
+    annotations: Optional[Dict[str, Any]] = Field(
+        None,
+        title="Annotations",
+        description="A dictionary of extra data that will be passed to destination systems.",
+    )
 
 
 models_by_stream_type = {
