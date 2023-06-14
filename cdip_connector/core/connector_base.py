@@ -1,15 +1,15 @@
-import asyncio, aiohttp
+import asyncio
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import List, AsyncGenerator, Any
+from typing import List, AsyncGenerator, Dict
 
-from aiohttp import ClientSession, ClientTimeout
+import httpx
 
 from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
 from .schemas import IntegrationInformation, CDIPBaseModel
-from .portal_api import PortalApi
+from gundi_client import PortalApi
 from .tracing import tracer
 
 
@@ -39,32 +39,25 @@ class AbstractConnector(ABC):
 
     async def main(self) -> None:
         try:
-
-            async with ClientSession() as s:
-                integrations = await self.portal.get_authorized_integrations(s)
-
+            integrations = await self.portal.get_authorized_integrations()
             for idx in range(0, len(integrations), self.concurrency):
+                self.logger.info(f"Running Integrations for client_id: {cdip_settings.KEYCLOAK_CLIENT_ID}")
 
-                async with ClientSession() as session:
+                tasks = [
+                    asyncio.ensure_future(self.__class__().extract_load(integration))
+                    for integration in integrations[idx: idx + self.concurrency]
+                ]
 
-                    self.logger.info(f"Running Integrations for client_id: {cdip_settings.KEYCLOAK_CLIENT_ID}")
-
-                    tasks = [
-                        asyncio.ensure_future(self.__class__().extract_load(session, integration))
-                        for integration in integrations[idx: idx + self.concurrency]
-                    ]
-
-                    result = await asyncio.gather(*tasks)
-                    self.logger.info(result)
+                result = await asyncio.gather(*tasks)
+                self.logger.info(result)
 
         except Exception as ex:
             self.logger.exception("Uncaught exception in main.")
             raise
 
     async def extract_load(
-        self, session: ClientSession, integration: IntegrationInformation
-    ) -> int:
-
+        self, integration: IntegrationInformation
+    ) -> Dict:
 
         self.logger.info(f'Executing Function for Integration: {integration.name} ({integration.id})', extra={
             'integration_id': str(integration.id),
@@ -73,9 +66,9 @@ class AbstractConnector(ABC):
         })
 
         total = 0
-        integration.device_states = await self.portal.fetch_device_states(session, integration.id)
+        integration.device_states = await self.portal.fetch_device_states(integration.id)
 
-        async for extracted in self.extract(session, integration):
+        async for extracted in self.extract(integration):
 
             if extracted is not None:
                 self.logger.info(
@@ -118,7 +111,7 @@ class AbstractConnector(ABC):
 
     @abstractmethod
     async def extract(
-            self, session: ClientSession, integration_info: IntegrationInformation
+            self, integration_info: IntegrationInformation
     ) -> AsyncGenerator[List[CDIPBaseModel], None]:
         s = (
             yield 0
@@ -128,13 +121,10 @@ class AbstractConnector(ABC):
         pass
 
     async def update_state(self, integration_info: IntegrationInformation) -> None:
-        async with aiohttp.ClientSession() as sess:
-            await self.portal.update_state(sess, integration_info)
+        await self.portal.update_state(integration_info)
 
     async def load(self, transformed_data: List[CDIPBaseModel]) -> None:
-
-        async with aiohttp.ClientSession() as sess:
-            headers = await self.portal.get_auth_header(sess)
+        headers = await self.portal.get_auth_header()
 
         def generate_batches(iterable, n=self.load_batch_size):
             for i in range(0, len(iterable), n):
@@ -159,17 +149,16 @@ class AbstractConnector(ABC):
                     },
                 )
 
-                async with aiohttp.ClientSession() as sess:
-                    client_response = await sess.post(
+                async with httpx.AsyncClient(timeout=120, verify=cdip_settings.CDIP_API_SSL_VERIFY) as session:
+                    client_response = await session.post(
                         url=cdip_settings.CDIP_API_ENDPOINT,
                         headers=headers,
                         json=clean_batch,
-                        ssl=cdip_settings.CDIP_API_SSL_VERIFY,
                     )
 
                 # Catch to attempt to re-authorized
-                if client_response.status == 401:
-                    headers = await self.portal.get_auth_header(sess)
+                if client_response.status_code == 401:
+                    headers = await self.portal.get_auth_header()
                 else:
                     [self.item_callback(item) for item in batch]
                     client_response.raise_for_status()
