@@ -1,4 +1,4 @@
-from cdip_connector.core.portal_api import PortalApi
+from gundi_client import PortalApi
 
 
 class TestPortalApi:
