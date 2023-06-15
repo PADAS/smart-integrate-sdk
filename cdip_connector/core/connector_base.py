@@ -3,12 +3,10 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from typing import List, AsyncGenerator, Dict
-
 import httpx
-
 from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
-from .schemas import IntegrationInformation, CDIPBaseModel
+from gundi_core.schemas import IntegrationInformation, CDIPBaseModel
 from gundi_client import PortalApi
 from .tracing import tracer
 
