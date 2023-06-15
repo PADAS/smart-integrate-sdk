@@ -8,7 +8,7 @@ from aiohttp import ClientSession, ClientTimeout
 
 from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
-from .schemas import IntegrationInformation, CDIPBaseModel
+from gundi_core.schemas import IntegrationInformation, CDIPBaseModel
 from .portal_api import PortalApi
 from .tracing import tracer
 

@@ -862,6 +862,21 @@ grpcio = ">=1.54.2"
 protobuf = ">=4.21.6"
 
 [[package]]
+name = "gundi-core"
+version = "1.0.0"
+description = ""
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "gundi_core-1.0.0-py3-none-any.whl", hash = "sha256:1bbb16ed881ee359fc54bca93c0c1f9318c1c003a8f53a304ac090b4edaf8ff7"},
+    {file = "gundi_core-1.0.0.tar.gz", hash = "sha256:cc9efdea3bf0b313605013568523d8f7261a29916bbd9abe34fefc5c807cb9be"},
+]
+
+[package.dependencies]
+pydantic = ">=1.7.3,<2.0.0"
+
+[[package]]
 name = "idna"
 version = "3.4"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -1950,4 +1965,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "e201346d2484ebffaccb0ed9f621ef9a33c66e9b441a0eb217eafadf20e54ff4"
+content-hash = "6947a9137301c9b4ad6b70d1770ecaa15cbd5114b6ef50b8a727b8a98a206528"
