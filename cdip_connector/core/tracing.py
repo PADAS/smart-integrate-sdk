@@ -9,7 +9,7 @@ from opentelemetry.propagators.cloud_trace_propagator import (
 )
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.confluent_kafka import ConfluentKafkaInstrumentor
 
 
@@ -40,7 +40,7 @@ def instrument_kafka_producer(producer):
 
 # Capture requests (sync and async)
 RequestsInstrumentor().instrument()
-AioHttpClientInstrumentor().instrument()
+HTTPXClientInstrumentor().instrument()
 # Using the X-Cloud-Trace-Context header
 set_global_textmap(CloudTraceFormatPropagator())
 tracer = configure_tracer(name="cdip-integrations")
