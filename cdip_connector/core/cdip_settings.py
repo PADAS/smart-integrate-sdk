@@ -55,3 +55,5 @@ INTEGRATION_CONCURRENCY = env.int("INTEGRATION_CONCURRENCY", 5)
 
 # How many items should be posted to Sensors API in each request.
 INTEGRATION_LOAD_BATCH_SIZE = env.int("INTEGRATION_LOAD_BATCH_SIZE", 100)
+
+TRACING_ENABLED = env.bool("TRACING_ENABLED", True)
