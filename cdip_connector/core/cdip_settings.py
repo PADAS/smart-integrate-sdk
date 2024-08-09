@@ -56,6 +56,7 @@ INTEGRATION_CONCURRENCY = env.int("INTEGRATION_CONCURRENCY", 5)
 # How many items should be posted to Sensors API in each request.
 INTEGRATION_LOAD_BATCH_SIZE = env.int("INTEGRATION_LOAD_BATCH_SIZE", 25)
 
+TRACING_ENABLED = env.bool("TRACING_ENABLED", True)
 
 # Coerce task count and index into common variables (using CronJob variables). 
 # This allows them to be provided by a Kubernetes CronJob or by a Cloud Run Job.
