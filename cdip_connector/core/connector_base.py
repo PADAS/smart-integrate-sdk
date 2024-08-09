@@ -1,8 +1,12 @@
 import asyncio
 import json
 import logging
+import hashlib
+import backoff
+
 from abc import ABC, abstractmethod
-from typing import List, AsyncGenerator, Dict
+import uuid
+from typing import List, AsyncGenerator, Dict, Any
 import httpx
 from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
@@ -13,6 +17,25 @@ from .tracing import tracer
 
 logconfig.init()
 
+logger = logging.getLogger(__name__)
+
+class SessionExpiredException(Exception):
+    pass
+
+
+def calculate_partition(uuid: uuid.UUID, num_partitions: int) -> int:
+    '''
+    Calculate a partition from the UUID.
+    This is a nice way to allow multiple instances of the same connector to run in parallel.
+    '''
+    return int(hashlib.sha1(uuid.bytes).hexdigest(), 16) % num_partitions
+
+def filter_items_for_task(items: List[Any]) -> List[Any]:
+
+    if cdip_settings.JOB_IS_PARTITIONED:
+        logger.info(f"Filtering items for task. job_completion_index: {cdip_settings.JOB_COMPLETION_INDEX}, job_completion_count: {cdip_settings.JOB_COMPLETION_COUNT}")
+        items = [item for item in items if calculate_partition(item.id, cdip_settings.JOB_COMPLETION_COUNT) == cdip_settings.JOB_COMPLETION_INDEX]
+    return items
 
 class AbstractConnector(ABC):
     DEFAULT_LOOKBACK_DAYS = cdip_settings.DEFAULT_LOOKBACK_DAYS
@@ -38,6 +61,8 @@ class AbstractConnector(ABC):
     async def main(self) -> None:
         try:
             integrations = await self.portal.get_authorized_integrations()
+            integrations = filter_items_for_task(integrations)
+
             for idx in range(0, len(integrations), self.concurrency):
                 self.logger.info(f"Running Integrations for client_id: {cdip_settings.KEYCLOAK_CLIENT_ID}")
 
@@ -122,7 +147,6 @@ class AbstractConnector(ABC):
         await self.portal.update_state(integration_info)
 
     async def load(self, transformed_data: List[CDIPBaseModel]) -> None:
-        headers = await self.portal.get_auth_header()
 
         def generate_batches(iterable, n=self.load_batch_size):
             for i in range(0, len(iterable), n):
@@ -135,29 +159,32 @@ class AbstractConnector(ABC):
             self.logger.debug(f"r1 is: {batch[0]}")
             clean_batch = [json.loads(r.json()) for r in batch]
 
-            for j in range(2):
-
-                self.logger.debug(
+            self.logger.debug(
                     "sending batch.",
                     extra={
-                        "batch_no": i,
-                        "length": len(batch),
-                        "attempt": j,
-                        "api": cdip_settings.CDIP_API_ENDPOINT,
+                    "batch_no": i,
+                    "length": len(clean_batch),
+                    "api": cdip_settings.CDIP_API_ENDPOINT,
                     },
                 )
 
-                async with httpx.AsyncClient(timeout=120, verify=cdip_settings.CDIP_API_SSL_VERIFY) as session:
-                    client_response = await session.post(
-                        url=cdip_settings.CDIP_API_ENDPOINT,
-                        headers=headers,
-                        json=clean_batch,
-                    )
+            await self.load_batch(clean_batch)
 
-                # Catch to attempt to re-authorized
-                if client_response.status_code == 401:
-                    headers = await self.portal.get_auth_header()
-                else:
-                    [self.item_callback(item) for item in batch]
-                    client_response.raise_for_status()
-                    break
+
+    @backoff.on_exception(backoff.expo, (httpx.HTTPError, httpx.ReadTimeout, SessionExpiredException), max_tries=3)
+    async def load_batch(self, clean_batch: List[CDIPBaseModel]) -> None:
+        
+        headers = await self.portal.get_auth_header()
+        async with httpx.AsyncClient(timeout=120, verify=cdip_settings.CDIP_API_SSL_VERIFY) as session:
+            client_response = await session.post(
+                url=cdip_settings.CDIP_API_ENDPOINT,
+                headers=headers,
+                json=clean_batch,
+            )
+
+            # Catch to attempt to re-authorized
+            if client_response.status_code == 401:
+                raise SessionExpiredException()
+            else:
+                [self.item_callback(item) for item in clean_batch]
+                client_response.raise_for_status()
