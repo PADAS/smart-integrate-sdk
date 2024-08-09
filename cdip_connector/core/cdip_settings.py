@@ -54,6 +54,31 @@ CONFLUENT_CLOUD_PASSWORD = env.str("CONFLUENT_CLOUD_PASSWORD", "password not set
 INTEGRATION_CONCURRENCY = env.int("INTEGRATION_CONCURRENCY", 5)
 
 # How many items should be posted to Sensors API in each request.
-INTEGRATION_LOAD_BATCH_SIZE = env.int("INTEGRATION_LOAD_BATCH_SIZE", 100)
+INTEGRATION_LOAD_BATCH_SIZE = env.int("INTEGRATION_LOAD_BATCH_SIZE", 25)
 
 TRACING_ENABLED = env.bool("TRACING_ENABLED", True)
+
+# Coerce task count and index into common variables (using CronJob variables). 
+# This allows them to be provided by a Kubernetes CronJob or by a Cloud Run Job.
+# Get them as strings, because we want '0' to be zero and not False here.
+_job_completion_index = os.environ.get('JOB_COMPLETION_INDEX', None) or os.environ.get('CLOUD_RUN_TASK_INDEX', None)
+JOB_COMPLETION_INDEX = int(_job_completion_index) if _job_completion_index is not None else None
+
+_job_completion_count = os.environ.get('JOB_COMPLETION_COUNT', None) or os.environ.get('CLOUD_RUN_TASK_COUNT', None)
+JOB_COMPLETION_COUNT = int(_job_completion_count) if _job_completion_count is not None else None
+
+# Sanitize task count and index.
+if JOB_COMPLETION_INDEX is not None \
+    and JOB_COMPLETION_COUNT is not None:
+    if JOB_COMPLETION_COUNT > 1 and JOB_COMPLETION_COUNT > JOB_COMPLETION_INDEX:
+        # Partitioned
+        JOB_IS_PARTITIONED = True
+    else:
+        # Values are set but are not valid.
+        raise ValueError('JOB_COMPLETION_COUNT must be greater than 1 and greater than JOB_COMPLETION_INDEX')
+else:
+    # No partitioning
+    JOB_IS_PARTITIONED = False
+    JOB_COMPLETION_INDEX = 0
+    JOB_COMPLETION_COUNT = 1
+
