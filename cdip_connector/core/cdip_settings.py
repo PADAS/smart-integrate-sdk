@@ -68,14 +68,14 @@ _job_completion_count = os.environ.get('JOB_COMPLETION_COUNT', None) or os.envir
 JOB_COMPLETION_COUNT = int(_job_completion_count) if _job_completion_count is not None else None
 
 # Sanitize task count and index.
-if JOB_COMPLETION_INDEX is not None \
-    and JOB_COMPLETION_COUNT is not None:
-    if JOB_COMPLETION_COUNT > 1 and JOB_COMPLETION_COUNT > JOB_COMPLETION_INDEX:
-        # Partitioned
-        JOB_IS_PARTITIONED = True
-    else:
+if all(item is not None for item in [JOB_COMPLETION_INDEX, JOB_COMPLETION_COUNT]):
+
+    if JOB_COMPLETION_INDEX >= JOB_COMPLETION_COUNT:
         # Values are set but are not valid.
         raise ValueError('JOB_COMPLETION_COUNT must be greater than 1 and greater than JOB_COMPLETION_INDEX')
+    else:
+        JOB_IS_PARTITIONED = True
+
 else:
     # No partitioning
     JOB_IS_PARTITIONED = False
