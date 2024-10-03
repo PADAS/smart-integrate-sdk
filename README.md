@@ -1,35 +1,14 @@
-# SMART Integrate Connector Library
+# Deprecation Message
 
-Base library for building data source extractors.
+This repository is deprecated and will soon be archived.
 
-## Developing this Library
+The Gundi project source and packages supercede this code and are available in other locations.
 
-### Prerequisites
+If you have arrived here hoping to develop a Gundi integration, then we recommend the repositories below to get started.
 
-* Python 3.7+
+## Client Library
+[Gundi Client](https://github.com/PADAS/gundi-client)
 
-* [Poetry](https://python-poetry.org/) (recommended). 
-  Install Poetry to get started.
-
-### Initialize your Environment
-
-Since you've already installed poetry, you can use it to initialize the development environment for this project.
-
-```shell
-poetry install
-```
-
-Run a shell using poetry.
-
-```shell
-poetry shell
-```
-
-### Building a Wheel
-
-```shell
-poetry build
-```
-
-Then find a tar ball and wheel in `./dist`
+## Integration Action Runner Template
+[Gundi Integration Action Runner Template](https://github.com/PADAS/gundi-integration-action-runner)
 
