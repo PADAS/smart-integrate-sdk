@@ -45,7 +45,7 @@ class AbstractConnector(ABC):
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.portal = PortalApi()
+        self.portal = PortalApi(data_timeout=cdip_settings.DEFAULT_DATA_TIMEOUT_SECONDS)
 
         self.load_batch_size = cdip_settings.INTEGRATION_LOAD_BATCH_SIZE
         self.concurrency = cdip_settings.INTEGRATION_CONCURRENCY
