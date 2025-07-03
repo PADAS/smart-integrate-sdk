@@ -61,22 +61,23 @@ class AbstractConnector(ABC):
     async def main(self) -> None:
         try:
             integrations = await self.portal.get_authorized_integrations()
-            integrations = filter_items_for_task(integrations)
-
-            for idx in range(0, len(integrations), self.concurrency):
-                self.logger.info(f"Running Integrations for client_id: {cdip_settings.KEYCLOAK_CLIENT_ID}")
-
-                tasks = [
-                    asyncio.ensure_future(self.__class__().extract_load(integration))
-                    for integration in integrations[idx: idx + self.concurrency]
-                ]
-
+        except Exception as e:
+            self.logger.exception(f"Exception reading integrations from the portal: {e}. Abort.")
+            raise e
+        self.logger.info(f"Running Integrations for client_id: {cdip_settings.KEYCLOAK_CLIENT_ID}")
+        for idx in range(0, len(integrations), self.concurrency):
+            tasks = [
+                asyncio.ensure_future(self.__class__().extract_load(integration))
+                for integration in integrations[idx: idx + self.concurrency]
+            ]
+            try:
                 result = await asyncio.gather(*tasks)
+            except Exception as e:
+                self.logger.exception(f"Exception processing integrations batch {tasks}: {e}. Continuing.")
+                continue
+            else:
                 self.logger.info(result)
-
-        except Exception as ex:
-            self.logger.exception("Uncaught exception in main.")
-            raise
+        self.logger.info("Finished processing integrations.")
 
     async def extract_load(
         self, integration: IntegrationInformation
