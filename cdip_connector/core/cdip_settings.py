@@ -43,14 +43,6 @@ GOOGLE_APPLICATION_CREDENTIALS = env.str(
 CLOUD_STORAGE_TYPE = env.str("CLOUD_STORAGE_TYPE", "google")
 BUCKET_NAME = env.str("BUCKET_NAME", "cdip-dev-cameratrap")
 
-# Kafka Settings
-KAFKA_BROKER = env.str("KAFKA_BROKER", "localhost:9092")
-CONFLUENT_CLOUD_ENABLED = env.bool("CONFLUENT_CLOUD_ENABLED", False)
-KEY_ORDERING_ENABLED = env.bool("KEY_ORDERING_ENABLED", False)
-
-CONFLUENT_CLOUD_USERNAME = env.str("CONFLUENT_CLOUD_USERNAME", "username not set")
-CONFLUENT_CLOUD_PASSWORD = env.str("CONFLUENT_CLOUD_PASSWORD", "password not set")
-
 # How many integrations should run at once.
 INTEGRATION_CONCURRENCY = env.int("INTEGRATION_CONCURRENCY", 5)
 
@@ -71,7 +63,7 @@ JOB_COMPLETION_COUNT = int(_job_completion_count) if _job_completion_count is no
 # Sanitize task count and index.
 if JOB_COMPLETION_INDEX is not None \
     and JOB_COMPLETION_COUNT is not None:
-    if JOB_COMPLETION_COUNT > 1 and JOB_COMPLETION_COUNT > JOB_COMPLETION_INDEX:
+    if JOB_COMPLETION_COUNT and JOB_COMPLETION_COUNT > JOB_COMPLETION_INDEX:
         # Partitioned
         JOB_IS_PARTITIONED = True
     else:
