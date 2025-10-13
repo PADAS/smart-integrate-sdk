@@ -61,6 +61,7 @@ class AbstractConnector(ABC):
     async def main(self) -> None:
         try:
             integrations = await self.portal.get_authorized_integrations()
+            integrations = filter_items_for_task(integrations)
         except Exception as e:
             self.logger.exception(f"Exception reading integrations from the portal: {e}. Abort.")
             raise e
