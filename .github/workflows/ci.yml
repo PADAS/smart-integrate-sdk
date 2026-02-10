@@ -12,6 +12,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
+      - name: Install Pillow build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-dev build-essential libjpeg-dev zlib1g-dev
+
       - run: uv sync --group dev
 
-      - run: uv run pytest tests/
+      - run: uv run pytest
