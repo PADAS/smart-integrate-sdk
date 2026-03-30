@@ -1,6 +1,6 @@
 [project]
 name = "cdip_connector"
-version = "1.7.0"
+version = "1.7.1"
 description = "SMART Integrate Connector Library"
 authors = [
     { name = "Rohit Chaudhri", email = "rohitc@vulcan.com" },
