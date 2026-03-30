@@ -72,7 +72,10 @@ class AbstractConnector(ABC):
                 for integration in integrations[idx: idx + self.concurrency]
             ]
             try:
-                result = await asyncio.gather(*tasks)
+                result = await asyncio.gather(*tasks, return_exceptions=True)
+                for r in result:
+                    if isinstance(r, Exception):
+                        self.logger.error(f"Integration in batch failed: {r}. Other integrations in this batch were not affected.")
             except Exception as e:
                 self.logger.exception(f"Exception processing integrations batch {tasks}: {e}. Continuing.")
                 continue
