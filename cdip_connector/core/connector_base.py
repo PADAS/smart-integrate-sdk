@@ -67,17 +67,24 @@ class AbstractConnector(ABC):
             raise e
         self.logger.info(f"Running Integrations for client_id: {cdip_settings.KEYCLOAK_CLIENT_ID}")
         for idx in range(0, len(integrations), self.concurrency):
+            batch = integrations[idx: idx + self.concurrency]
+            batch_ids = [str(i.id) for i in batch]
             tasks = [
                 asyncio.ensure_future(self.__class__().extract_load(integration))
-                for integration in integrations[idx: idx + self.concurrency]
+                for integration in batch
             ]
             try:
                 result = await asyncio.gather(*tasks, return_exceptions=True)
                 for r in result:
                     if isinstance(r, Exception):
-                        self.logger.error(f"Integration in batch failed: {r}. Other integrations in this batch were not affected.")
+                        self.logger.error(
+                            f"Integration in batch failed: {type(r).__name__}: {r}. "
+                            f"Batch contained {len(batch)} integrations: {batch_ids}. "
+                            f"Other integrations in this batch were not affected.",
+                            extra=dict(batch_integration_ids=batch_ids)
+                        )
             except Exception as e:
-                self.logger.exception(f"Exception processing integrations batch {tasks}: {e}. Continuing.")
+                self.logger.exception(f"Exception processing integrations batch {batch_ids}: {e}. Continuing.")
                 continue
             else:
                 self.logger.info(result)
