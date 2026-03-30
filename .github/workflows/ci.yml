@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install Pillow build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-dev build-essential libjpeg-dev zlib1g-dev
+
+      - run: uv sync --group dev
+
+      - run: uv run pytest

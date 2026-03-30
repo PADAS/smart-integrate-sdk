@@ -6,7 +6,7 @@ import backoff
 
 from abc import ABC, abstractmethod
 import uuid
-from typing import List, AsyncGenerator, Dict, Any
+from typing import List, AsyncGenerator, Dict, Any, Optional
 import httpx
 from cdip_connector.core import cdip_settings
 from cdip_connector.core import logconfig
@@ -41,12 +41,9 @@ class AbstractConnector(ABC):
     DEFAULT_LOOKBACK_DAYS = cdip_settings.DEFAULT_LOOKBACK_DAYS
     DEFAULT_REQUESTS_TIMEOUT = (3.1, 20)
 
-    def __init__(self):
-
+    def __init__(self, portal: Optional[PortalApi] = None):
         self.logger = logging.getLogger(self.__class__.__name__)
-
-        self.portal = PortalApi(data_timeout=cdip_settings.DEFAULT_DATA_TIMEOUT_SECONDS)
-
+        self.portal = portal if portal is not None else PortalApi(data_timeout=cdip_settings.DEFAULT_DATA_TIMEOUT_SECONDS)
         self.load_batch_size = cdip_settings.INTEGRATION_LOAD_BATCH_SIZE
         self.concurrency = cdip_settings.INTEGRATION_CONCURRENCY
 
@@ -70,7 +67,7 @@ class AbstractConnector(ABC):
             batch = integrations[idx: idx + self.concurrency]
             batch_ids = [str(i.id) for i in batch]
             tasks = [
-                asyncio.ensure_future(self.__class__().extract_load(integration))
+                asyncio.ensure_future(self.__class__(portal=self.portal).extract_load(integration))
                 for integration in batch
             ]
             try:
